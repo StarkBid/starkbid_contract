@@ -8,6 +8,7 @@ use starkbid_contract::IHelloStarknetSafeDispatcher;
 use starkbid_contract::IHelloStarknetSafeDispatcherTrait;
 use starkbid_contract::IHelloStarknetDispatcher;
 use starkbid_contract::IHelloStarknetDispatcherTrait;
+use starknet::contract_address_const;
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
     let contract = declare(name).unwrap().contract_class();
@@ -46,6 +47,20 @@ fn test_cannot_increase_balance_with_zero_value() {
             assert(*panic_data.at(0) == 'Amount cannot be 0', *panic_data.at(0));
         },
     };
+}
+
+#[test]
+fn test_validate_wallet() {
+    let contract_address = deploy_contract("HelloStarknet");
+    let dispatcher = IHelloStarknetDispatcher { contract_address };
+
+    // Test zero address
+    let zero_address: ContractAddress = contract_address_const::<0>();
+    assert(!dispatcher.validate_wallet(zero_address), 'Zero address should fail');
+
+    // Test with a valid address
+    let valid_address: ContractAddress = contract_address_const::<0x02e554f88fc04ddbc2809d15f6dcdc1e8f339d4be8459a2c026713de3d0f22cd>();
+    assert(dispatcher.validate_wallet(valid_address), 'Valid address should pass');
 }
 
 #[test]
