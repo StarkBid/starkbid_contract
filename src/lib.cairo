@@ -8,6 +8,9 @@ pub trait IHelloStarknet<TContractState> {
     fn get_caller_address(self: @TContractState) -> felt252;
 }
 
+mod verify_sig;
+pub use verify_sig::{IVerifySignature, VerifySignature, IVerifySignatureDispatcher, IVerifySignatureSafeDispatcherTrait, IVerifySignatureSafeDispatcher, IVerifySignatureDispatcherTrait};
+
 #[starknet::contract]
 mod HelloStarknet {
     use core::num::traits::Zero;

@@ -15,6 +15,14 @@ assert_macros = "2.8.4"
 [[target.starknet-contract]]
 sierra = true
 
+[[target.starknet-contract]]
+name = "hellostarknet"
+path = "src/lib.cairo"
+
+[[target.starknet-contract]]
+name = "verifysignature"
+path = "src/verify_sig.cairo"
+
 [scripts]
 test = "snforge test"
 
