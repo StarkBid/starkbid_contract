@@ -9,22 +9,18 @@ pub trait IVerifySignature<TContractState> {
         signature_r: felt252,
         signature_s: felt252
     ) -> bool;
-    fn get_nonce(self: @TContractState, user_address: ContractAddress) -> felt252;
     fn get_caller_address(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::contract]
 pub mod VerifySignature {
     use core::num::traits::Zero;
-use starknet::{
+    use starknet::{
         get_caller_address, 
         get_block_timestamp,
         contract_address::ContractAddress,
-        storage::Map,
     };
-    use core::pedersen;
     use core::ecdsa::check_ecdsa_signature;
-    use core::hash::{HashStateTrait};
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -46,9 +42,7 @@ use starknet::{
     }
 
     #[storage]
-    struct Storage {
-        user_nonce: Map<ContractAddress, felt252>,
-    }
+    struct Storage {}
 
     #[abi(embed_v0)]
     pub impl VerifySignatureImpl of super::IVerifySignature<ContractState> {
@@ -61,13 +55,7 @@ use starknet::{
         ) -> bool {
             assert(claimed_address.is_non_zero(), 'Invalid user address');
             let timestamp: u64 = get_block_timestamp();
-            let current_nonce = self.user_nonce.read(claimed_address);
-            
-            // Hash the message array and nonce
-            let mut state = pedersen::PedersenTrait::new(0);
-            state = state.update(message);
-            state = state.update(current_nonce);
-            
+
             // Verify the signature
             let is_valid = check_ecdsa_signature(
                 message,
@@ -79,7 +67,6 @@ use starknet::{
             println!("is valid {}", is_valid);
             
             if is_valid {
-                self.user_nonce.write(claimed_address, current_nonce + 1);
                 self.emit(AuthenticationSuccess { 
                     user_address: claimed_address, 
                     timestamp 
@@ -92,10 +79,6 @@ use starknet::{
                 });
                 false
             }
-        }
-
-        fn get_nonce(self: @ContractState, user_address: ContractAddress) -> felt252 {
-            self.user_nonce.read(user_address)
         }
         
         fn get_caller_address(self: @ContractState) -> ContractAddress {

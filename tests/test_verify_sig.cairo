@@ -6,11 +6,10 @@ use snforge_std::{
 
 use starkbid_contract::{IVerifySignatureSafeDispatcher, IVerifySignatureSafeDispatcherTrait, IVerifySignatureDispatcherTrait, IVerifySignatureDispatcher};
 
-// Test constants
 const TEST_MESSAGE: felt252 = 0x65ad64cab8a5e6aca149cb913a31ad2d0129a0c81fe20c33c2d5f1892215529;
-// Replace with actual r and s from JavaScript script
-const VALID_SIGNATURE_R: felt252 = 0x7cbf320dabe3be212384b74213ffff100e75920513e74558ceec110d041d133; // From ec.starkCurve.sign
-const VALID_SIGNATURE_S: felt252 = 0x2a28596801bae683197812ab8072489289b4230d51a0dcd1b6b1848c234472e; // From ec.starkCurve.sign
+
+const VALID_SIGNATURE_R: felt252 = 0x7cbf320dabe3be212384b74213ffff100e75920513e74558ceec110d041d133;
+const VALID_SIGNATURE_S: felt252 = 0x2a28596801bae683197812ab8072489289b4230d51a0dcd1b6b1848c234472e;
 
 fn deploy_contract(name: ByteArray) -> ContractAddress {
     let contract = declare(name).unwrap().contract_class();
@@ -27,9 +26,6 @@ fn test_successful_verification() {
     
     let dispatcher = IVerifySignatureDispatcher { contract_address };
     
-    // Initial nonce should be 0
-    assert(dispatcher.get_nonce(user_address) == 0, 'Invalid initial nonce');
-    
     // Test verification with valid signature
     let success = dispatcher.verify_signature(
         user_address,
@@ -40,9 +36,6 @@ fn test_successful_verification() {
     
     // Verification should succeed
     assert(success, 'Verification failed');
-    
-    // Nonce should be incremented
-    assert(dispatcher.get_nonce(user_address) == 1, 'Nonce not incremented');
     
     stop_cheat_caller_address(contract_address);
 }
@@ -98,10 +91,6 @@ fn test_multiple_users() {
     );
     assert(success2, 'User2 verification failed');
     stop_cheat_caller_address(contract_address);
-    
-    // Check nonces are incremented independently
-    assert(dispatcher.get_nonce(user1_address) == 1, 'User1 nonce incorrect');
-    assert(dispatcher.get_nonce(user2_address) == 1, 'User2 nonce incorrect');
 }
 
 #[test]
