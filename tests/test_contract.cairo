@@ -16,7 +16,7 @@ fn deploy_contract(name: ByteArray) -> ContractAddress {
     contract_address
 }
 
-// #[test]
+#[test]
 fn test_increase_balance() {
     let contract_address = deploy_contract("HelloStarknet");
 
@@ -31,7 +31,7 @@ fn test_increase_balance() {
     assert(balance_after == 42, 'Invalid balance');
 }
 
-// #[test]
+#[test]
 #[feature("safe_dispatcher")]
 fn test_cannot_increase_balance_with_zero_value() {
     let contract_address = deploy_contract("HelloStarknet");
@@ -49,7 +49,7 @@ fn test_cannot_increase_balance_with_zero_value() {
     };
 }
 
-// #[test]
+#[test]
 fn test_validate_wallet() {
     let contract_address = deploy_contract("HelloStarknet");
     let dispatcher = IHelloStarknetDispatcher { contract_address };
@@ -63,7 +63,7 @@ fn test_validate_wallet() {
     assert(dispatcher.validate_wallet(valid_address), 'Valid address should pass');
 }
 
-// #[test]
+#[test]
 fn test_get_caller_address() {
     let contract_address = deploy_contract("HelloStarknet");
     let test_wallet: ContractAddress = 0x123456789.try_into().unwrap();

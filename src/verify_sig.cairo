@@ -5,7 +5,7 @@ pub trait IVerifySignature<TContractState> {
     fn verify_signature(
         ref self: TContractState, 
         claimed_address: ContractAddress,
-        message: Span<felt252>,
+        message: felt252,
         signature_r: felt252,
         signature_s: felt252
     ) -> bool;
@@ -55,7 +55,7 @@ use starknet::{
         fn verify_signature(
             ref self: ContractState, 
             claimed_address: ContractAddress,
-            message: Span<felt252>,
+            message: felt252,
             signature_r: felt252,
             signature_s: felt252
         ) -> bool {
@@ -65,21 +65,18 @@ use starknet::{
             
             // Hash the message array and nonce
             let mut state = pedersen::PedersenTrait::new(0);
-            let mut i = 0;
-            while i < message.len() {
-                state = state.update(*message.at(i));
-                i += 1;
-            };
+            state = state.update(message);
             state = state.update(current_nonce);
-            let message_hash = state.finalize();
             
             // Verify the signature
             let is_valid = check_ecdsa_signature(
-                message_hash,
+                message,
                 claimed_address.into(),
                 signature_r,
                 signature_s
             );
+
+            println!("is valid {}", is_valid);
             
             if is_valid {
                 self.user_nonce.write(claimed_address, current_nonce + 1);
