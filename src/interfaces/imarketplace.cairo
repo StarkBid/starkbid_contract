@@ -65,5 +65,36 @@ pub trait IMarketplace<TContractState> {
     fn get_listing(self: @TContractState, listing_id: u256) -> Listing;
     fn get_listing_status(self: @TContractState, listing_id: u256) -> ListingStatus;
     fn is_listing_active(self: @TContractState, listing_id: u256) -> bool;
+
+        // Event-related functions (optional, for modularity)
+        fn emit_mint_event(
+            ref self: TContractState,
+            minter: ContractAddress,
+            token_id: u256,
+            metadata: felt,
+            timestamp: u64,
+        );
+        fn emit_transfer_event(
+            ref self: TContractState,
+            from: ContractAddress,
+            to: ContractAddress,
+            token_id: u256,
+            timestamp: u64,
+        );
+        fn emit_buy_event(
+            ref self: TContractState,
+            buyer: ContractAddress,
+            seller: ContractAddress,
+            token_id: u256,
+            price: u256,
+            timestamp: u64,
+        );
+        fn emit_bid_event(
+            ref self: TContractState,
+            bidder: ContractAddress,
+            token_id: u256,
+            bid_amount: u256,
+            timestamp: u64,
+        );
 }
 
