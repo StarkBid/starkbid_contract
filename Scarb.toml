@@ -6,17 +6,25 @@ edition = "2023_11"
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
 
 [dependencies]
-starknet = "2.8.4"
+starknet = "2.8.5"
 
 [dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.32.0" }
-assert_macros = "2.8.4"
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.35.1" }
+assert_macros = "2.8.5"
 
 [[target.starknet-contract]]
 sierra = true
+casm = true
 
 [scripts]
 test = "snforge test"
+
+
+[tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]
+
+[tool.fmt]
+sort-module-level-items = true
 
 # Visit https://foundry-rs.github.io/starknet-foundry/appendix/scarb-toml.html for more information
 
