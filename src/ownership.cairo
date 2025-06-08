@@ -8,7 +8,7 @@ pub mod Ownership {
     use crate::interfaces::iownership::IOwnership;
     use starknet::event::EventEmitter;
     use starknet::{
-        ContractAddress, contract_address_const, get_block_timestamp, get_caller_address,
+        ContractAddress, get_block_timestamp, get_caller_address,
     };
 
 
@@ -37,7 +37,7 @@ pub mod Ownership {
         RoyaltiesDistributed: RoyaltiesDistributed,
         RoyaltyPortionCredited: RoyaltyPortionCredited,
         PlatformFeeCredited: PlatformFeeCredited,
-        Withdrawal: WithdrawalEvent // Renamed to avoid conflict with function
+        Withdrawal: WithdrawalEvent
     }
 
     #[derive(Drop, starknet::Event)]
@@ -90,7 +90,7 @@ pub mod Ownership {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct WithdrawalEvent { // Renamed to avoid conflict
+    struct WithdrawalEvent {
         recipient: ContractAddress,
         amount: u256,
     }
@@ -106,19 +106,7 @@ pub mod Ownership {
         self.platform_fee_percentage_bp.write(initial_platform_fee_bp);
         assert(
             initial_platform_fee_bp <= 100_u8, 'Fee bp too high',
-        ); // Max 100% for basis points representation if it means direct percentage * 1, or 10000 for 100.00%
-        // Assuming bp here means percentage * 1 for simplicity, adjust if 10000 scale.
-        // For this example, let's assume it's direct percentage for u8.
-        // If it's basis points (out of 10000), then max should be 10000.
-        // Let's clarify: if u8 is 5 for 5%, then max is 100.
-        // If u8 is 500 for 5.00%, then max is 10000.
-        // Given u8, it's likely direct percentage or needs scaling factor.
-        // For now, assume u8 is direct percentage (0-100).
-        // Re-evaluating: basis points are usually out of 10,000. u8 is too small.
-        // Let's assume `initial_platform_fee_bp` is a direct percentage for u8 (0-100).
-        // Or, if it's truly basis points, the type should be u16 or u32.
-        // For this implementation, let's assume `platform_fee_percentage_bp` is direct percentage
-        // (0-100) stored in u8.
+        );
         assert(initial_platform_fee_bp <= 100, 'Platform fee % too high');
     }
 
@@ -185,15 +173,14 @@ pub mod Ownership {
             let history_vec = self.asset_ownership_history.entry((asset, token_id));
             let mut history_array = ArrayTrait::new();
             let len = history_vec.len();
-            let mut i = 0; // Ensure i is u32 for loop
+            let mut i = 0;
             while i < len {
-                history_array.append(history_vec.at(i).read()); // .at() for Vec takes u32
+                history_array.append(history_vec.at(i).read());
                 i += 1;
             };
             history_array
         }
 
-        // This is the corrected function
         fn set_royalty_settings(
             ref self: ContractState,
             asset: ContractAddress,
@@ -213,12 +200,10 @@ pub mod Ownership {
                 // Access tuple elements
                 let (recipient, percentage) = tuple_value;
                 assert(!recipient.is_zero(), 'Recipient cannot be zero');
-                // Fix: Dereference percentage (@u8) to u8 before comparison
                 assert(*percentage > 0_u8 && *percentage <= 100_u8, 'Invalid percentage');
-                // Fix: Dereference percentage (@u8), convert to u16, then add
                 total_percentage += (*percentage).into();
                 i += 1;
-            }; // Fix: Add semicolon
+            };
             assert(total_percentage <= 100_u16, 'Total percentage > 100');
 
             let mut storage_vec_path = self.royalty_settings.entry((asset, token_id));
@@ -270,7 +255,7 @@ pub mod Ownership {
             let caller = get_caller_address();
             assert(caller == self.contract_owner.read(), 'Caller not contract owner');
             assert!(!recipient.is_zero(), "Platform recipient cannot be zero");
-            assert(fee_percentage <= 100, 'Platform fee % > 100'); // Assuming direct percentage
+            assert(fee_percentage <= 100, 'Platform fee % > 100');
 
             self.platform_fee_recipient.write(recipient);
             self.platform_fee_percentage_bp.write(fee_percentage); // Storing as direct percentage
@@ -336,10 +321,6 @@ pub mod Ownership {
             assert(amount_to_withdraw > 0, 'No funds to withdraw');
 
             self.pending_withdrawals.write(caller, 0);
-            // In a real scenario, here you would transfer the `amount_to_withdraw`
-            // of the appropriate token (e.g., ETH or ERC20) to the `caller`.
-            // For example: IERC20Dispatcher { contract_address: token_address }.transfer(caller,
-            // amount_to_withdraw);
             self.emit(WithdrawalEvent { recipient: caller, amount: amount_to_withdraw });
         }
 
