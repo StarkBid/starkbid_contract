@@ -107,7 +107,6 @@ pub mod Ownership {
         assert(
             initial_platform_fee_bp <= 100_u8, 'Fee bp too high',
         );
-        assert(initial_platform_fee_bp <= 100, 'Platform fee % too high');
     }
 
 
@@ -209,10 +208,10 @@ pub mod Ownership {
             let mut storage_vec_path = self.royalty_settings.entry((asset, token_id));
 
             // Add new settings from the input array
-            let mut i = 0;
-            while i < len {
-                storage_vec_path.append().write(*recipients_config.at(i));
-                i += 1;
+            let mut j = 0;
+            while j < len.into() {
+                storage_vec_path.at(j).write(*recipients_config.at(i));
+                j += 1;
             };
 
             self.emit(RoyaltySettingsUpdated { asset, token_id });
