@@ -427,3 +427,101 @@ fn test_set_gateway_url_unauthorized() {
     start_cheat_caller_address(contract_address, USER());
     dispatcher.set_gateway_url("https://unauthorized.gateway/");
 }
+
+// =====================================
+// Authorization Tests
+// =====================================
+
+#[test]
+fn test_is_authorized_owner() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    start_cheat_caller_address(contract_address, OWNER());
+    dispatcher.set_token_metadata(1_u256, SAMPLE_IPFS_HASH(), 12345_felt252);
+    stop_cheat_caller_address(contract_address);
+
+    // Owner should always be authorized
+    assert!(dispatcher.is_authorized(1_u256, OWNER()), "Owner should be authorized");
+}
+
+#[test]
+fn test_is_authorized_admin() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    let token_id = 1_u256;
+
+    start_cheat_caller_address(contract_address, OWNER());
+    dispatcher.set_token_metadata(token_id, SAMPLE_IPFS_HASH(), 12345_felt252);
+    dispatcher.set_metadata_admin(token_id, ADMIN());
+    stop_cheat_caller_address(contract_address);
+
+    // Admin should be authorized for their token
+    assert!(dispatcher.is_authorized(token_id, ADMIN()), "Admin should be authorized");
+
+    // Admin should not be authorized for other tokens
+    start_cheat_caller_address(contract_address, OWNER());
+    dispatcher.set_token_metadata(2_u256, SAMPLE_IPFS_HASH(), 12345_felt252);
+    stop_cheat_caller_address(contract_address);
+
+    assert!(
+        !dispatcher.is_authorized(2_u256, ADMIN()),
+        "Admin should not be authorized for other tokens",
+    );
+}
+
+#[test]
+fn test_is_authorized_unauthorized_user() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    start_cheat_caller_address(contract_address, OWNER());
+    dispatcher.set_token_metadata(1_u256, SAMPLE_IPFS_HASH(), 12345_felt252);
+    stop_cheat_caller_address(contract_address);
+
+    // Regular user should not be authorized
+    assert!(!dispatcher.is_authorized(1_u256, USER()), "Regular user should not be authorized");
+}
+
+#[test]
+fn test_set_metadata_admin() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    let token_id = 1_u256;
+
+    start_cheat_caller_address(contract_address, OWNER());
+    dispatcher.set_token_metadata(token_id, SAMPLE_IPFS_HASH(), 12345_felt252);
+
+    // Set admin
+    dispatcher.set_metadata_admin(token_id, ADMIN());
+
+    let stored_admin = dispatcher.get_metadata_admin(token_id);
+    assert!(stored_admin == ADMIN(), "Admin should be set correctly");
+
+    stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+#[should_panic(expected: 'Not authorized')]
+fn test_set_metadata_admin_unauthorized() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    start_cheat_caller_address(contract_address, OWNER());
+    dispatcher.set_token_metadata(1_u256, SAMPLE_IPFS_HASH(), 12345_felt252);
+    stop_cheat_caller_address(contract_address);
+
+    start_cheat_caller_address(contract_address, USER());
+    dispatcher.set_metadata_admin(1_u256, ADMIN());
+}
+
+#[test]
+#[should_panic(expected: 'Token does not exist')]
+fn test_get_metadata_admin_nonexistent_token() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    let _admin = dispatcher.get_metadata_admin(999_u256);
+}
