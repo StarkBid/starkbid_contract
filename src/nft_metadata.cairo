@@ -1,5 +1,5 @@
 #[starknet::contract]
-mod ERC721Metadata {
+pub mod ERC721Metadata {
     use core::byte_array::ByteArray;
     use core::byte_array::ByteArrayTrait;
     use crate::interfaces::inft_metadata::{IERC721Metadata, IMetadataManager};
@@ -227,16 +227,6 @@ mod ERC721Metadata {
 
             // Check if IPFS hash is valid
             if !self.validate_ipfs_hash(metadata.ipfs_hash) {
-                return false;
-            }
-
-            // Check if metadata hash is not zero
-            if metadata.metadata_hash == 0 {
-                return false;
-            }
-
-            // Check if created_at is valid
-            if metadata.created_at == 0 {
                 return false;
             }
 

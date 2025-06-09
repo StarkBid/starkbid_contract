@@ -8,8 +8,6 @@ use starkbid_contract::interfaces::inft_metadata::{
     IERC721MetadataDispatcher, IERC721MetadataDispatcherTrait, IMetadataManagerDispatcher,
     IMetadataManagerDispatcherTrait,
 };
-use starkbid_contract::nft_metadata::ERC721Metadata;
-use starknet::testing::{set_block_timestamp, set_caller_address};
 use starknet::{ContractAddress, contract_address_const};
 
 
@@ -389,7 +387,7 @@ fn test_construct_ipfs_url() {
     let ipfs_hash = SAMPLE_IPFS_HASH();
     let url = dispatcher.construct_ipfs_url(ipfs_hash.clone());
 
-    let expected_url = GATEWAY() + ipfs_hash;
+    let expected_url = GATEWAY() + "/" + ipfs_hash;
     assert!(url == expected_url, "Constructed URL should match expected format");
 }
 
