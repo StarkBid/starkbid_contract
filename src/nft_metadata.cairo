@@ -1,14 +1,17 @@
 #[starknet::contract]
 mod ERC721Metadata {
+    use core::byte_array::ByteArrayTrait;
+    use core::byte_array::ByteArray;
     use crate::interfaces::inft_metadata::{IERC721Metadata, IMetadataManager};
     use starknet::storage::{
         Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Vec, VecTrait, MutableVecTrait
     };
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
 
     #[derive(Drop, Serde, starknet::Store)]
     struct TokenMetadata {
-        ipfs_hash: felt252, // IPFS hash stored as felt252
+        ipfs_hash: ByteArray, // IPFS hash stored as ByteArray
         metadata_hash: felt252, // Hash of metadata for integrity
         created_at: u64, // Timestamp
         updated_at: u64, // Last update timestamp
@@ -24,8 +27,8 @@ mod ERC721Metadata {
     #[storage]
     struct Storage {
         // ERC-721 basic info
-        name: felt252,
-        symbol: felt252,
+        name: ByteArray,
+        symbol: ByteArray,
         // Core metadata storage
         token_metadata: Map<u256, TokenMetadata>,
         // Attribute storage: token_id -> trait_type -> value
@@ -33,7 +36,7 @@ mod ERC721Metadata {
         // Attribute keys for enumeration: token_id -> array of trait_types
         token_attribute_keys: Map<u256, Array<felt252>>,
         // IPFS gateway configuration
-        ipfs_gateway: Array<felt252>,
+        ipfs_gateway: ByteArray,
         // Contract owner
         owner: ContractAddress,
         // Token existence mapping
@@ -53,7 +56,7 @@ mod ERC721Metadata {
     #[derive(Drop, starknet::Event)]
     struct MetadataUpdate {
         token_id: u256,
-        ipfs_hash: felt252,
+        ipfs_hash: ByteArray,
         metadata_hash: felt252,
         updated_by: ContractAddress,
     }
@@ -73,7 +76,7 @@ mod ERC721Metadata {
 
     #[derive(Drop, starknet::Event)]
     struct GatewayUpdated {
-        new_gateway: Array<felt252>,
+        new_gateway: ByteArray,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -86,10 +89,10 @@ mod ERC721Metadata {
     #[constructor]
     fn constructor(
         ref self: ContractState,
-        name: felt252,
-        symbol: felt252,
+        name: ByteArray,
+        symbol: ByteArray,
         owner: ContractAddress,
-        initial_gateway: Array<felt252>,
+        initial_gateway: ByteArray,
     ) {
         self.name.write(name);
         self.symbol.write(symbol);
@@ -99,15 +102,15 @@ mod ERC721Metadata {
 
     #[abi(embed_v0)]
     impl ERC721MetadataImpl of IERC721Metadata<ContractState> {
-        fn name(self: @ContractState) -> felt252 {
+        fn name(self: @ContractState) -> ByteArray {
             self.name.read()
         }
 
-        fn symbol(self: @ContractState) -> felt252 {
+        fn symbol(self: @ContractState) -> ByteArray {
             self.symbol.read()
         }
 
-        fn token_uri(self: @ContractState, token_id: u256) -> Array<felt252> {
+        fn token_uri(self: @ContractState, token_id: u256) -> ByteArray {
             assert(self.token_exists.entry(token_id).read(), 'Token does not exist');
             let metadata = self.token_metadata.entry(token_id).read();
             self.construct_ipfs_url(metadata.ipfs_hash)
@@ -254,38 +257,30 @@ mod ERC721Metadata {
             true
         }
 
-        fn validate_ipfs_hash(self: @ContractState, ipfs_hash: felt252) -> bool {
+        fn validate_ipfs_hash(self: @ContractState, ipfs_hash: ByteArray) -> bool {
             // Basic validation - IPFS hash should not be zero
             // In a real implementation, you might want more sophisticated validation
-            ipfs_hash != 0
+            ipfs_hash != ""
         }
 
-        fn construct_ipfs_url(self: @ContractState, ipfs_hash: felt252) -> Array<felt252> {
-            let gateway = self.ipfs_gateway.read();
-            let mut url = array![];
-
-            // Append gateway URL
-            let mut i = 0;
-            while i < gateway.len() {
-                url.append(*gateway.at(i));
-                i += 1;
-            };
-
-            // Append IPFS hash (convert felt252 to string representation)
-            url.append(ipfs_hash);
-
+        fn construct_ipfs_url(self: @ContractState, ipfs_hash: ByteArray) -> ByteArray {
+            let gateway: ByteArray = self.ipfs_gateway.read();
+            let concatenator: ByteArray = "/";
+            let url = ByteArrayTrait::concat(
+                @ByteArrayTrait::concat(@gateway, @concatenator)
+            , @ipfs_hash);
             url
         }
 
-        fn get_gateway_url(self: @ContractState) -> Array<felt252> {
+        fn get_gateway_url(self: @ContractState) -> ByteArray {
             self.ipfs_gateway.read()
         }
 
-        fn set_gateway_url(ref self: ContractState, gateway_url: Array<felt252>) {
+        fn set_gateway_url(ref self: ContractState, gateway_url: ByteArray) {
             let caller = get_caller_address();
             assert(caller == self.owner.read(), 'Only owner can set gateway');
 
-            self.ipfs_gateway.write(gateway_url);
+            self.ipfs_gateway.write(gateway_url.clone());
 
             self.emit(GatewayUpdated { new_gateway: gateway_url });
         }
