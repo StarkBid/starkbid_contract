@@ -335,3 +335,95 @@ fn test_add_attribute_nonexistent_token() {
     start_cheat_caller_address(contract_address, OWNER());
     dispatcher.add_attribute(999_u256, 'rarity', 'legendary');
 }
+
+// =====================================
+// Validation Tests
+// =====================================
+
+#[test]
+fn test_validate_metadata_valid() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    start_cheat_caller_address(contract_address, OWNER());
+
+    let token_id = 1_u256;
+    dispatcher.set_token_metadata(token_id, SAMPLE_IPFS_HASH(), 12345_felt252);
+
+    let is_valid = dispatcher.validate_metadata(token_id);
+    assert!(is_valid, "Metadata should be valid");
+
+    stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+fn test_validate_metadata_nonexistent_token() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    let is_valid = dispatcher.validate_metadata(999_u256);
+    assert!(!is_valid, "Metadata should be invalid for nonexistent token");
+}
+
+#[test]
+fn test_validate_ipfs_hash() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    let valid_hash = SAMPLE_IPFS_HASH();
+    let empty_hash: ByteArray = "";
+
+    assert!(dispatcher.validate_ipfs_hash(valid_hash), "Valid hash should pass validation");
+    assert!(!dispatcher.validate_ipfs_hash(empty_hash), "Empty hash should fail validation");
+}
+
+// =====================================
+// URL Construction Tests
+// =====================================
+
+#[test]
+fn test_construct_ipfs_url() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    let ipfs_hash = SAMPLE_IPFS_HASH();
+    let url = dispatcher.construct_ipfs_url(ipfs_hash.clone());
+
+    let expected_url = GATEWAY() + ipfs_hash;
+    assert!(url == expected_url, "Constructed URL should match expected format");
+}
+
+#[test]
+fn test_get_gateway_url() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    let gateway = dispatcher.get_gateway_url();
+    assert!(gateway == GATEWAY(), "Gateway should match constructor value");
+}
+
+#[test]
+fn test_set_gateway_url() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    start_cheat_caller_address(contract_address, OWNER());
+
+    let new_gateway: ByteArray = "https://gateway.pinata.cloud/ipfs/";
+    dispatcher.set_gateway_url(new_gateway.clone());
+
+    let stored_gateway = dispatcher.get_gateway_url();
+    assert!(stored_gateway == new_gateway, "Gateway should be updated");
+
+    stop_cheat_caller_address(contract_address);
+}
+
+#[test]
+#[should_panic(expected: 'Only owner can set gateway')]
+fn test_set_gateway_url_unauthorized() {
+    let contract_address = deploy_contract();
+    let dispatcher = IMetadataManagerDispatcher { contract_address };
+
+    start_cheat_caller_address(contract_address, USER());
+    dispatcher.set_gateway_url("https://unauthorized.gateway/");
+}
