@@ -1,11 +1,11 @@
 #[starknet::contract]
 mod ERC721Metadata {
-    use core::byte_array::ByteArrayTrait;
     use core::byte_array::ByteArray;
+    use core::byte_array::ByteArrayTrait;
     use crate::interfaces::inft_metadata::{IERC721Metadata, IMetadataManager};
     use starknet::storage::{
-        Map, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
-        Vec, VecTrait, MutableVecTrait
+        Map, MutableVecTrait, StoragePathEntry, StoragePointerReadAccess, StoragePointerWriteAccess,
+        Vec, VecTrait,
     };
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
 
@@ -34,7 +34,7 @@ mod ERC721Metadata {
         // Attribute storage: token_id -> trait_type -> value
         token_attributes: Map<(u256, felt252), felt252>,
         // Attribute keys for enumeration: token_id -> array of trait_types
-        token_attribute_keys: Map<u256, Array<felt252>>,
+        token_attribute_keys: Map<u256, Vec<felt252>>,
         // IPFS gateway configuration
         ipfs_gateway: ByteArray,
         // Contract owner
@@ -120,15 +120,15 @@ mod ERC721Metadata {
     #[abi(embed_v0)]
     impl MetadataManagerImpl of IMetadataManager<ContractState> {
         fn set_token_metadata(
-            ref self: ContractState, token_id: u256, ipfs_hash: felt252, metadata_hash: felt252,
+            ref self: ContractState, token_id: u256, ipfs_hash: ByteArray, metadata_hash: felt252,
         ) {
             let caller = get_caller_address();
             assert(caller == self.owner.read(), 'Only owner can set metadata');
-            assert(self.validate_ipfs_hash(ipfs_hash), 'Invalid IPFS hash');
+            assert(self.validate_ipfs_hash(ipfs_hash.clone()), 'Invalid IPFS hash');
 
             let current_time = get_block_timestamp();
             let metadata = TokenMetadata {
-                ipfs_hash,
+                ipfs_hash: ipfs_hash.clone(),
                 metadata_hash,
                 created_at: current_time,
                 updated_at: current_time,
@@ -141,21 +141,21 @@ mod ERC721Metadata {
             self.emit(MetadataUpdate { token_id, ipfs_hash, metadata_hash, updated_by: caller });
         }
 
-        fn get_token_metadata(self: @ContractState, token_id: u256) -> (felt252, felt252) {
+        fn get_token_metadata(self: @ContractState, token_id: u256) -> (ByteArray, felt252) {
             assert(self.token_exists.entry(token_id).read(), 'Token does not exist');
             let metadata = self.token_metadata.entry(token_id).read();
-            (metadata.ipfs_hasIMetadataManagerh, metadata.metadata_hash)
+            (metadata.ipfs_hash, metadata.metadata_hash)
         }
 
         fn update_token_metadata(
-            ref self: ContractState, token_id: u256, ipfs_hash: felt252, metadata_hash: felt252,
+            ref self: ContractState, token_id: u256, ipfs_hash: ByteArray, metadata_hash: felt252,
         ) {
             let caller = get_caller_address();
             assert(self.is_authorized(token_id, caller), 'Not authorized');
-            assert(self.validate_ipfs_hash(ipfs_hash), 'Invalid IPFS hash');
+            assert(self.validate_ipfs_hash(ipfs_hash.clone()), 'Invalid IPFS hash');
 
             let mut metadata = self.token_metadata.entry(token_id).read();
-            metadata.ipfs_hash = ipfs_hash;
+            metadata.ipfs_hash = ipfs_hash.clone();
             metadata.metadata_hash = metadata_hash;
             metadata.updated_at = get_block_timestamp();
 
@@ -175,9 +175,8 @@ mod ERC721Metadata {
             let existing_value = self.token_attributes.entry((token_id, trait_type)).read();
             if existing_value == 0 {
                 // New attribute, add to keys array
-                let mut keys = self.token_attribute_keys.entry(token_id).read();
-                keys.append(trait_type);
-                self.token_attribute_keys.entry(token_id).write(keys);
+                let mut keys = self.token_attribute_keys.entry(token_id);
+                keys.append().write(trait_type);
             }
 
             self.token_attributes.entry((token_id, trait_type)).write(value);
@@ -192,19 +191,6 @@ mod ERC721Metadata {
 
             // Remove from storage
             self.token_attributes.entry((token_id, trait_type)).write(0);
-
-            // Remove from keys array
-            let mut keys = self.token_attribute_keys.entry(token_id).read();
-            let mut new_keys = array![];
-            let mut i = 0;
-            while i < keys.len() {
-                if *keys.at(i) != trait_type {
-                    new_keys.append(*keys.at(i));
-                }
-                i += 1;
-            };
-            self.token_attribute_keys.entry(token_id).write(new_keys);
-
             self.emit(AttributeRemoved { token_id, trait_type });
         }
 
@@ -216,13 +202,13 @@ mod ERC721Metadata {
         fn get_all_attributes(self: @ContractState, token_id: u256) -> Array<(felt252, felt252)> {
             assert(self.token_exists.entry(token_id).read(), 'Token does not exist');
 
-            let keys = self.token_attribute_keys.entry(token_id).read();
+            let keys = self.token_attribute_keys.entry(token_id);
             let mut attributes = array![];
             let mut i = 0;
 
             while i < keys.len() {
-                let trait_type = *keys.at(i);
-                let value = self.token_attributes.entry((token_id, trait_type)).read();
+                let trait_type = keys.at(i).read();
+                let value = self.get_attribute(token_id, trait_type);
                 if value != 0 {
                     attributes.append((trait_type, value));
                 }
@@ -267,8 +253,8 @@ mod ERC721Metadata {
             let gateway: ByteArray = self.ipfs_gateway.read();
             let concatenator: ByteArray = "/";
             let url = ByteArrayTrait::concat(
-                @ByteArrayTrait::concat(@gateway, @concatenator)
-            , @ipfs_hash);
+                @ByteArrayTrait::concat(@gateway, @concatenator), @ipfs_hash,
+            );
             url
         }
 
