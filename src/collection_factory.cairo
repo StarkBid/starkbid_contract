@@ -144,6 +144,25 @@ mod CollectionFactory {
             assert(!address.is_zero(), Errors::COLLECTION_NOT_FOUND);
             address
         }
+        fn get_collection_creator(
+            self: @ContractState, 
+            collection_id: u256
+        ) -> ContractAddress {
+            let creator = self.collection_creators.read(collection_id);
+            assert(!creator.is_zero(), Errors::COLLECTION_NOT_FOUND);
+            creator
+        }
+
+        fn is_class_declared(
+            self: @ContractState, 
+            class_hash: ClassHash
+        ) -> bool {
+            self.declared_classes.read(class_hash)
+        }
+
+        fn get_factory_owner(self: @ContractState) -> ContractAddress {
+            self.owner.read()
+        }
     }
     #[generate_trait]
     impl InternalImpl of InternalTrait {
