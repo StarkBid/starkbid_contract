@@ -24,4 +24,39 @@ mod CollectionFactory {
         // Collection counter for generating unique IDs
         collection_counter: u256,
     }
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        CollectionCreated: CollectionCreated,
+        ClassDeclared: ClassDeclared,
+        OwnershipTransferred: OwnershipTransferred,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct CollectionCreated {
+        #[key]
+        collection_id: u256,
+        #[key]
+        creator: ContractAddress,
+        contract_address: ContractAddress,
+        class_hash: ClassHash,
+        name: ByteArray,
+        symbol: ByteArray,
+        royalty_percentage: u16,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct ClassDeclared {
+        #[key]
+        class_hash: ClassHash,
+        declared_by: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct OwnershipTransferred {
+        #[key]
+        previous_owner: ContractAddress,
+        #[key]
+        new_owner: ContractAddress,
+    }
 }
