@@ -6,6 +6,7 @@ mod CollectionFactory {
         deploy_syscall, SyscallResultTrait
     };
     use starknet::storage::{Map, StoragePathEntry};
+    use crate::interfaces::icollection_factory::ICollectionFactory;
 
     #[storage]
     struct Storage {
@@ -58,5 +59,42 @@ mod CollectionFactory {
         previous_owner: ContractAddress,
         #[key]
         new_owner: ContractAddress,
+    }
+
+    mod Errors {
+        const ZERO_ADDRESS: felt252 = 'Zero address not allowed';
+        const CLASS_NOT_DECLARED: felt252 = 'Class hash not declared';
+        const CLASS_ALREADY_DECLARED: felt252 = 'Class hash already declared';
+    }
+
+    #[constructor]
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
+        assert(!owner.is_zero(), Errors::ZERO_ADDRESS);
+        self.owner.write(owner);
+        self.collection_counter.write(0);
+    }
+
+    #[abi(embed_v0)]
+    impl CollectionFactoryImpl of ICollectionFactory<ContractState> {
+        fn declare_collection_class(
+            ref self: ContractState, 
+            class_hash: ClassHash
+        ) -> bool {
+            self._assert_only_owner();
+            
+            // Check if class is already declared
+            assert(!self.declared_classes.read(class_hash), Errors::CLASS_ALREADY_DECLARED);
+            
+            // Mark class as declared
+            self.declared_classes.write(class_hash, true);
+            
+            // Emit event
+            self.emit(ClassDeclared {
+                class_hash,
+                declared_by: get_caller_address()
+            });
+            
+            true
+        }
     }
 }
