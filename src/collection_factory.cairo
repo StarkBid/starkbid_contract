@@ -65,6 +65,7 @@ mod CollectionFactory {
         const ZERO_ADDRESS: felt252 = 'Zero address not allowed';
         const CLASS_NOT_DECLARED: felt252 = 'Class hash not declared';
         const CLASS_ALREADY_DECLARED: felt252 = 'Class hash already declared';
+        const COLLECTION_NOT_FOUND: felt252 = 'Collection not found';
     }
 
     #[constructor]
@@ -133,6 +134,15 @@ mod CollectionFactory {
             });
             
             contract_address
+        }
+
+        fn get_collection_address(
+            self: @ContractState, 
+            collection_id: u256
+        ) -> ContractAddress {
+            let address = self.collections.read(collection_id);
+            assert(!address.is_zero(), Errors::COLLECTION_NOT_FOUND);
+            address
         }
     }
     #[generate_trait]
