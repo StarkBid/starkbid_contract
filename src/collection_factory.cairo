@@ -163,13 +163,28 @@ mod CollectionFactory {
         fn get_factory_owner(self: @ContractState) -> ContractAddress {
             self.owner.read()
         }
+        fn transfer_ownership(
+            ref self: ContractState, 
+            new_owner: ContractAddress
+        ) {
+            self._assert_only_owner();
+            assert(!new_owner.is_zero(), Errors::ZERO_ADDRESS);
+            
+            let previous_owner = self.owner.read();
+            self.owner.write(new_owner);
+            
+            self.emit(OwnershipTransferred {
+                previous_owner,
+                new_owner,
+            });
+        }
     }
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         fn _assert_only_owner(ref self: ContractState) {
             let caller = get_caller_address();
             let owner = self.owner.read();
-            assert(caller == owner, 'Only owner can call this function');
+            assert(caller == owner, 'Caller is not owner');
         }
         fn _assert_class_declared(ref self: ContractState, class_hash: ClassHash) {
             assert(self.declared_classes.read(class_hash), Errors::CLASS_NOT_DECLARED);
