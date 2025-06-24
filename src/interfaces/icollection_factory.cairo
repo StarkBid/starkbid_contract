@@ -8,13 +8,8 @@ trait ICollectionFactory<TContractState> {
     
     fn deploy_collection(
         ref self: TContractState,
-        collection_id: u256,
         class_hash: ClassHash,
-        creator: ContractAddress,
-        royalty_percentage: u16,
-        salt: felt252,
-        name: ByteArray,
-        symbol: ByteArray
+        arguments: Array<felt252>,
     ) -> ContractAddress;
     
     fn get_collection_address(
