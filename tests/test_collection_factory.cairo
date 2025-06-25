@@ -6,7 +6,7 @@ use snforge_std::{
 use starkbid_contract::interfaces::{
     ICollectionFactoryDispatcher, ICollectionFactoryDispatcherTrait
 };
-use starknet::{ContractAddress, ClassHash, contract_address_const, class_hash_const};
+use starknet::{ContractAddress, ClassHash, contract_address_const};
 
 // Test constants
 fn OWNER() -> ContractAddress {
