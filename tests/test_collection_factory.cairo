@@ -219,3 +219,27 @@ fn test_deploy_multiple_collections() {
     assert_eq!(collection.symbol(), "MTC");
     assert!(collection.get_owner(), USER2());
 }
+
+#[test]
+#[should_panic(expected: ('Collection not found',))]
+fn test_get_collection_creator_not_found() {
+    let factory = deploy_factory(OWNER());
+    factory.get_collection_creator(999_u256);
+}
+
+#[test]
+fn test_is_class_declared() {
+    let factory = deploy_factory(OWNER());
+    let class_hash = get_collection_class_hash();
+    
+    // Initially not declared
+    assert!(!factory.is_class_declared(class_hash));
+    
+    // Declare class
+    start_cheat_caller_address(factory.contract_address, OWNER());
+    factory.declare_collection_class(class_hash);
+    stop_cheat_caller_address(factory.contract_address);
+    
+    // Now should be declared
+    assert!(factory.is_class_declared(class_hash));
+}
