@@ -88,7 +88,7 @@ mod CollectionFactory {
         }
         fn deploy_collection(
             ref self: ContractState, class_hash: ClassHash, arguments: Array<felt252>,
-        ) -> ContractAddress {
+        ) -> (ContractAddress, u256) {
             self._assert_class_declared(class_hash);
             // Generate unique salt from blocktimestamp and block number
             let creator = get_caller_address();
@@ -111,7 +111,7 @@ mod CollectionFactory {
             // Emit CollectionCreated event
             self.emit(CollectionCreated { collection_id, creator, contract_address, class_hash });
 
-            contract_address
+            (contract_address, collection_id)
         }
 
         fn get_collection_address(self: @ContractState, collection_id: u256) -> ContractAddress {
