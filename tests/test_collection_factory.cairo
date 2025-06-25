@@ -231,15 +231,50 @@ fn test_get_collection_creator_not_found() {
 fn test_is_class_declared() {
     let factory = deploy_factory(OWNER());
     let class_hash = get_collection_class_hash();
-    
+
     // Initially not declared
     assert!(!factory.is_class_declared(class_hash));
-    
+
     // Declare class
     start_cheat_caller_address(factory.contract_address, OWNER());
     factory.declare_collection_class(class_hash);
     stop_cheat_caller_address(factory.contract_address);
-    
+
     // Now should be declared
     assert!(factory.is_class_declared(class_hash));
+}
+#[test]
+fn test_transfer_ownership() {
+    let factory = deploy_factory(OWNER());
+
+    start_cheat_caller_address(factory.contract_address, OWNER());
+    let mut spy = spy_events();
+
+    factory.transfer_ownership(USER1());
+
+    assert_eq!(factory.get_factory_owner(), USER1());
+
+    // Check event emission
+    let events = spy.get_events().emitted_by(factory.contract_address);
+    assert_eq!(events.len(), 1);
+
+    stop_cheat_caller_address(factory.contract_address);
+}
+
+#[test]
+#[should_panic(expected: ('Unauthorized caller',))]
+fn test_transfer_ownership_unauthorized() {
+    let factory = deploy_factory(OWNER());
+
+    start_cheat_caller_address(factory.contract_address, USER1());
+    factory.transfer_ownership(USER2());
+}
+
+#[test]
+#[should_panic(expected: ('Zero address not allowed',))]
+fn test_transfer_ownership_zero_address() {
+    let factory = deploy_factory(OWNER());
+
+    start_cheat_caller_address(factory.contract_address, OWNER());
+    factory.transfer_ownership(ZERO_ADDRESS());
 }
