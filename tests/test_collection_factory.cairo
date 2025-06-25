@@ -79,3 +79,48 @@ fn get_collection_class_hash() -> ClassHash {
     let contract = declare("MockCollection").unwrap().contract_class();
     contract.class_hash
 }
+
+#[test]
+fn test_declare_collection_class() {
+    let factory = deploy_factory(OWNER());
+    let class_hash = get_collection_class_hash();
+    
+    start_cheat_caller_address(factory.contract_address, OWNER());
+    
+    let mut spy = spy_events();
+    let result = factory.declare_collection_class(class_hash);
+    
+    assert!(result);
+    assert!(factory.is_class_declared(class_hash));
+    
+    // Check event emission
+    let events = spy.get_events().emitted_by(factory.contract_address);
+    assert_eq!(events.len(), 1);
+    
+    let (from, event) = events.at(0);
+    assert_eq!(*from, factory.contract_address);
+    
+    stop_cheat_caller_address(factory.contract_address);
+}
+
+#[test]
+#[should_panic(expected: ('Unauthorized caller',))]
+fn test_declare_collection_class_unauthorized() {
+    let factory = deploy_factory(OWNER());
+    let class_hash = get_collection_class_hash();
+    
+    start_cheat_caller_address(factory.contract_address, USER1());
+    factory.declare_collection_class(class_hash);
+}
+
+#[test]
+#[should_panic(expected: ('Class hash already declared',))]
+fn test_declare_collection_class_already_declared() {
+    let factory = deploy_factory(OWNER());
+    let class_hash = get_collection_class_hash();
+    
+    start_cheat_caller_address(factory.contract_address, OWNER());
+    factory.declare_collection_class(class_hash);
+    // Try to declare again
+    factory.declare_collection_class(class_hash);
+}
