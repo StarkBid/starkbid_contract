@@ -1,5 +1,5 @@
-use starknet::ContractAddress;
 use core::traits::TryInto;
+use starknet::ContractAddress;
 
 #[derive(Drop, Serde, starknet::Store, PartialEq)]
 pub enum OfferStatus {
@@ -55,7 +55,6 @@ pub trait IOffer<TContractState> {
         percentage: u256
     );
     fn get_royalty_info(
-        self: @TContractState, 
-        nft_contract: ContractAddress
+        self: @TContractState, nft_contract: ContractAddress
     ) -> (ContractAddress, u256);
 }

@@ -7,9 +7,7 @@ pub mod Ownership {
     };
     use crate::interfaces::iownership::IOwnership;
     use starknet::event::EventEmitter;
-    use starknet::{
-        ContractAddress, get_block_timestamp, get_caller_address,
-    };
+    use starknet::{ContractAddress, get_block_timestamp, get_caller_address,};
 
 
     #[storage]
@@ -104,9 +102,7 @@ pub mod Ownership {
         self.contract_owner.write(get_caller_address());
         self.platform_fee_recipient.write(initial_platform_fee_recipient);
         self.platform_fee_percentage_bp.write(initial_platform_fee_bp);
-        assert(
-            initial_platform_fee_bp <= 100_u8, 'Fee bp too high',
-        );
+        assert(initial_platform_fee_bp <= 100_u8, 'Fee bp too high',);
     }
 
 
@@ -128,7 +124,8 @@ pub mod Ownership {
             let previous_owner = asset_owner_entry.read();
 
             // Allow initial assignment if previous_owner is zero
-            if previous_owner.is_zero() {// This is the first time ownership is being set for this asset.
+            if previous_owner
+                .is_zero() { // This is the first time ownership is being set for this asset.
             // No need to check caller against previous_owner if previous_owner is zero.
             } else {
                 assert(caller == previous_owner, 'Invalid Owner');
