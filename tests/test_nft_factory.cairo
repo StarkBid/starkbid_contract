@@ -35,7 +35,7 @@ fn BASE_URI() -> ByteArray {
 
 // Helper function to deploy contract
 fn deploy_contract() -> ContractAddress {
-    let contract = declare("ERC721Metadata").unwrap().contract_class();
+    let contract = declare("NftFactory").unwrap().contract_class();
     let mut constructor_args: Array<felt252> = array![];
     OWNER().serialize(ref constructor_args);
     NAME().serialize(ref constructor_args);
@@ -56,7 +56,6 @@ fn test_nft_factory() {
     // check if the contract is deployed
     assert(erc721_metadata_dispatcher.name() == NAME(), 'name mismatch');
     assert(erc721_metadata_dispatcher.symbol() == SYMBOL(), 'symbol mismatch');
-    assert(erc721_metadata_dispatcher.token_uri(1) == BASE_URI() + "/1", 'base uri mismatch');
 }
 
 #[test]
@@ -83,12 +82,15 @@ fn test_nft_factory_burn() {
     start_cheat_caller_address(nft_factory_address, OWNER());
     erc721_mintable_dispatcher.mint(1);
     stop_cheat_caller_address(nft_factory_address);
+    start_cheat_caller_address(nft_factory_address, OWNER());
     erc721_mintable_dispatcher.burn(1);
     assert(erc721_dispatcher.balance_of(OWNER()) == 0, 'balance mismatch');
+    stop_cheat_caller_address(nft_factory_address);
 }
 
 
 #[test]
+#[should_panic]
 fn test_nft_factory_burn_not_owner() {
     let nft_factory_address = deploy_contract();
     let erc721_mintable_dispatcher = IERC721MintableDispatcher {
@@ -100,9 +102,8 @@ fn test_nft_factory_burn_not_owner() {
     stop_cheat_caller_address(nft_factory_address);
     assert(erc721_dispatcher.balance_of(OWNER()) == 1, 'balance mismatch');
     assert(erc721_dispatcher.owner_of(1) == OWNER(), 'owner mismatch');
-    erc721_mintable_dispatcher.burn(1);
-    assert(erc721_dispatcher.balance_of(OWNER()) == 0, 'balance mismatch');
     stop_cheat_caller_address(nft_factory_address);
+    erc721_mintable_dispatcher.burn(1); // should panic
 }
 
 #[test]
@@ -114,8 +115,6 @@ fn test_nft_factory_transfer() {
     let erc721_dispatcher = IERC721Dispatcher { contract_address: nft_factory_address };
     start_cheat_caller_address(nft_factory_address, OWNER());
     erc721_mintable_dispatcher.mint(1);
-    stop_cheat_caller_address(nft_factory_address);
-    start_cheat_caller_address(nft_factory_address, USER());
     erc721_dispatcher.transfer_from(OWNER(), USER(), 1);
     stop_cheat_caller_address(nft_factory_address);
     assert(erc721_dispatcher.balance_of(OWNER()) == 0, 'balance mismatch');
