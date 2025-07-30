@@ -1,17 +1,17 @@
 #[starknet::contract]
 pub mod NftFactory {
+    use crate::interfaces::ierc721::IERC721Mintable;
     use openzeppelin_introspection::src5::SRC5Component;
     use openzeppelin_token::erc721::{ERC721Component, ERC721HooksEmptyImpl};
     use starknet::storage::{
         Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry
     };
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
-    use crate::interfaces::ierc721::IERC721Mintable;
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
 
-    // ERC721 Mixin
+
     #[abi(embed_v0)]
     impl ERC721MixinImpl = ERC721Component::ERC721MixinImpl<ContractState>;
     impl ERC721InternalImpl = ERC721Component::InternalImpl<ContractState>;
@@ -48,14 +48,14 @@ pub mod NftFactory {
 
     #[abi(embed_v0)]
     impl NFTFactoryImpl of IERC721Mintable<ContractState> {
-        fn mint(ref self: ContractState, to: ContractAddress, token_id: u256) {
-            self.erc721.mint(to, token_id);
+        fn mint(ref self: ContractState, token_id: u256) {
+            self.erc721.mint(get_caller_address(), token_id);
         }
 
         fn burn(ref self: ContractState, token_id: u256) {
+            let owner = self.erc721.owner_of(token_id);
+            assert(owner == get_caller_address(), 'not owner');
             self.erc721.burn(token_id);
         }
     }
-
-
 }
