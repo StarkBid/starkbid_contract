@@ -1,8 +1,8 @@
 #[starknet::contract]
 pub mod Offer {
+    use core::num::traits::Zero;
     use core::starknet::storage::Map;
     use core::traits::TryInto;
-    use core::num::traits::Zero;
 
     use crate::interfaces::ierc20::{IERC20Dispatcher, IERC20DispatcherTrait};
     use crate::interfaces::ierc721::{IERC721Dispatcher, IERC721DispatcherTrait};
@@ -10,12 +10,10 @@ pub mod Offer {
 
     use starknet::event::EventEmitter;
     use starknet::syscalls::send_message_to_l1_syscall;
-    use starknet::{
-        ContractAddress, get_caller_address, get_block_timestamp, get_contract_address
-    };
+    use starknet::{ContractAddress, get_caller_address, get_block_timestamp, get_contract_address};
 
     const ZERO_ADDRESS: felt252 = 0;
-    const BASIS_POINTS: u256 = 10000; 
+    const BASIS_POINTS: u256 = 10000;
 
     #[storage]
     struct Storage {
@@ -111,45 +109,44 @@ pub mod Offer {
             self.offers.write(offer_id, offer);
             self.next_offer_id.write(offer_id + 1.into());
 
-            self.emit(OfferCreated {
-                offer_id,
-                nft_contract,
-                token_id,
-                offerer: caller,
-                payment_token,
-                offer_amount,
-                expiration,
-            });
+            self
+                .emit(
+                    OfferCreated {
+                        offer_id,
+                        nft_contract,
+                        token_id,
+                        offerer: caller,
+                        payment_token,
+                        offer_amount,
+                        expiration,
+                    }
+                );
 
             offer_id
         }
 
-fn accept_offer(ref self: ContractState, offer_id: u256) {
-    let offer = self.offers.read(offer_id);
-    let caller = get_caller_address();
+        fn accept_offer(ref self: ContractState, offer_id: u256) {
+            let offer = self.offers.read(offer_id);
+            let caller = get_caller_address();
 
-    assert(offer.status == OfferStatus::Active(()), 'Offer not active');
-    assert(get_block_timestamp() <= offer.expiration, 'Offer expired');
+            assert(offer.status == OfferStatus::Active(()), 'Offer not active');
+            assert(get_block_timestamp() <= offer.expiration, 'Offer expired');
 
-    let royalty_amount = if offer.royalty_percentage > 0.into() {
-        (offer.offer_amount * offer.royalty_percentage) / BASIS_POINTS
-    } else {
-        0.into()
-    };
+            let royalty_amount = if offer.royalty_percentage > 0.into() {
+                (offer.offer_amount * offer.royalty_percentage) / BASIS_POINTS
+            } else {
+                0.into()
+            };
 
-    let payment_amount = offer.offer_amount - royalty_amount;
+            let payment_amount = offer.offer_amount - royalty_amount;
 
-    let nft = IERC721Dispatcher { contract_address: offer.nft_contract };
-    assert(nft.owner_of(offer.token_id) == caller, 'Not NFT owner');
+            let nft = IERC721Dispatcher { contract_address: offer.nft_contract };
+            assert(nft.owner_of(offer.token_id) == caller, 'Not NFT owner');
 
-    let updated_offer = OfferStruct {
-        status: OfferStatus::Accepted(()),
-        ..offer
-    };
-    self.offers.write(offer_id, updated_offer);
+            let updated_offer = OfferStruct { status: OfferStatus::Accepted(()), ..offer };
+            self.offers.write(offer_id, updated_offer);
 
-    nft.transfer_from(caller, offer.offerer, offer.token_id);
-
+            nft.transfer_from(caller, offer.offerer, offer.token_id);
 
             if !offer.payment_token.is_zero() {
                 let erc20 = IERC20Dispatcher { contract_address: offer.payment_token };
@@ -170,18 +167,17 @@ fn accept_offer(ref self: ContractState, offer_id: u256) {
                     let _ = royalty_amount;
                 }
 
-                self.emit(RoyaltyPaid {
-                    nft_contract: offer.nft_contract,
-                    recipient: offer.royalty_recipient,
-                    amount: royalty_amount,
-                });
+                self
+                    .emit(
+                        RoyaltyPaid {
+                            nft_contract: offer.nft_contract,
+                            recipient: offer.royalty_recipient,
+                            amount: royalty_amount,
+                        }
+                    );
             }
 
-            self.emit(OfferAccepted {
-                offer_id,
-                acceptor: caller,
-                payment_amount,
-            });
+            self.emit(OfferAccepted { offer_id, acceptor: caller, payment_amount, });
         }
 
         fn cancel_offer(ref self: ContractState, offer_id: u256) {
@@ -190,10 +186,7 @@ fn accept_offer(ref self: ContractState, offer_id: u256) {
 
             assert(caller == offer.offerer, 'Not offer creator');
             assert(offer.status == OfferStatus::Active(()), 'Offer not active');
-            let updated_offer = OfferStruct {
-                status: OfferStatus::Cancelled(()),
-                ..offer
-            };
+            let updated_offer = OfferStruct { status: OfferStatus::Cancelled(()), ..offer };
             self.offers.write(offer_id, updated_offer);
             let offer_for_payment = offer;
             if !offer_for_payment.payment_token.is_zero() {
