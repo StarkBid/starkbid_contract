@@ -6,6 +6,7 @@ pub mod NftFactory {
         Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry
     };
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
+    use crate::interfaces::ierc721::IERC721Mintable;
 
     component!(path: ERC721Component, storage: erc721, event: ERC721Event);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -44,4 +45,17 @@ pub mod NftFactory {
         self.owner.write(owner);
         self.erc721.initializer(name, symbol, base_uri);
     }
+
+    #[abi(embed_v0)]
+    impl NFTFactoryImpl of IERC721Mintable<ContractState> {
+        fn mint(ref self: ContractState, to: ContractAddress, token_id: u256) {
+            self.erc721.mint(to, token_id);
+        }
+
+        fn burn(ref self: ContractState, token_id: u256) {
+            self.erc721.burn(token_id);
+        }
+    }
+
+
 }
