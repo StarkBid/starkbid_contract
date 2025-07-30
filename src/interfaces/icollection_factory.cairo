@@ -5,7 +5,7 @@ pub trait ICollectionFactory<TContractState> {
 
     fn deploy_collection(
         ref self: TContractState, class_hash: ClassHash, arguments: Array<felt252>,
-    ) -> (ContractAddress, u256); 
+    ) -> (ContractAddress, u256);
 
     fn get_collection_address(self: @TContractState, collection_id: u256) -> ContractAddress;
 
