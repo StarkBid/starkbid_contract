@@ -1,4 +1,5 @@
 pub mod Marketplace;
+pub mod Nft;
 pub mod NftMetadata;
 pub mod Offer;
 pub mod Ownership;

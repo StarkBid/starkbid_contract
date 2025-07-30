@@ -29,6 +29,6 @@ pub trait IERC721Metadata<TState> {
 
 #[starknet::interface]
 pub trait IERC721Mintable<TState> {
-    fn mint(ref self: TState, to: ContractAddress, token_id: u256);
+    fn mint(ref self: TState, token_id: u256);
     fn burn(ref self: TState, token_id: u256);
 }
