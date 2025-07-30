@@ -1,0 +1,57 @@
+name: Contract Tests and Formatting Checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  SCARB_VERSION: 2.8.5
+  SNFORGE_VERSION: 0.35.1
+  CAIRO_VERSION: 2.8.5
+
+jobs:
+  test:
+    name: Run Contract Tests and Formatting Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install scarb
+        run: curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v $SCARB_VERSION
+
+      - name: Install snfoundryup
+        run: curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh
+
+      - name: Install snforge
+        run: snfoundryup -v $SNFORGE_VERSION
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.scarb
+            ~/.snfoundry
+            target
+          key: ${{ runner.os }}-scarb-${{ hashFiles('**/Scarb.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-scarb-
+
+      - name: Check Scarb version
+        run: scarb --version
+
+      - name: Check SNForge version
+        run: snforge --version
+      
+      - name: Build contracts
+        run: scarb build
+
+      - name: Format check
+        run: scarb fmt --check
+
+      - name: Run tests
+        run: snforge test

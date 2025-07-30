@@ -109,12 +109,12 @@ source = "git+https://github.com/openzeppelin/cairo-contracts?tag=v0.18.0#2f3730
 [[package]]
 name = "snforge_scarb_plugin"
 version = "0.35.1"
-source = "git+https://github.com/foundry-rs/starknet-foundry.git?tag=v0.35.1#089de2c7a391372a7aaa54ec2706b117f955d06a"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.35.1#089de2c7a391372a7aaa54ec2706b117f955d06a"
 
 [[package]]
 name = "snforge_std"
 version = "0.35.1"
-source = "git+https://github.com/foundry-rs/starknet-foundry.git?tag=v0.35.1#089de2c7a391372a7aaa54ec2706b117f955d06a"
+source = "git+https://github.com/foundry-rs/starknet-foundry?tag=v0.35.1#089de2c7a391372a7aaa54ec2706b117f955d06a"
 dependencies = [
  "snforge_scarb_plugin",
 ]

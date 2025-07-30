@@ -12,15 +12,11 @@ pub mod Ownership {
 
     #[storage]
     pub struct Storage {
-        asset_owner: Map<(ContractAddress, u256), ContractAddress>, 
-        asset_ownership_history: Map<
-            (ContractAddress, u256), Vec<ContractAddress>,
-        >, 
-        royalty_settings: Map<
-            (ContractAddress, u256), Vec<(ContractAddress, u8)>,
-        >,
-        pending_withdrawals: Map<ContractAddress, u256>, 
-        platform_fee_percentage_bp: u8, 
+        asset_owner: Map<(ContractAddress, u256), ContractAddress>,
+        asset_ownership_history: Map<(ContractAddress, u256), Vec<ContractAddress>,>,
+        royalty_settings: Map<(ContractAddress, u256), Vec<(ContractAddress, u8)>,>,
+        pending_withdrawals: Map<ContractAddress, u256>,
+        platform_fee_percentage_bp: u8,
         platform_fee_recipient: ContractAddress,
         contract_owner: ContractAddress,
     }
@@ -118,10 +114,9 @@ pub mod Ownership {
             let previous_owner = asset_owner_entry.read();
 
             if previous_owner
-                .is_zero() { 
-            } else {
-                assert(caller == previous_owner, 'Invalid Owner');
-            }
+                .is_zero() {} else {
+                    assert(caller == previous_owner, 'Invalid Owner');
+                }
             assert(previous_owner != new_owner, 'Cannot transfer asset to self');
             assert(!new_owner.is_zero(), 'New owner cannot be zero');
 

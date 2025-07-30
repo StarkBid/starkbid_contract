@@ -5,6 +5,7 @@ pub mod Offer;
 pub mod Ownership;
 pub mod VerifySignature;
 pub mod interfaces {
+    pub mod icollection_factory;
     pub mod ierc20;
     pub mod ierc721;
     pub mod imarketplace;

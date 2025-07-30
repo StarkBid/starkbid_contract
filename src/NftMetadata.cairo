@@ -11,16 +11,16 @@ pub mod ERC721Metadata {
 
     #[derive(Drop, Serde, starknet::Store)]
     struct TokenMetadata {
-        ipfs_hash: ByteArray, 
-        metadata_hash: felt252, 
-        created_at: u64, 
-        updated_at: u64, 
-        admin: ContractAddress 
+        ipfs_hash: ByteArray,
+        metadata_hash: felt252,
+        created_at: u64,
+        updated_at: u64,
+        admin: ContractAddress
     }
 
     #[derive(Drop, Serde, starknet::Store)]
     struct Attribute {
-        trait_type: felt252, 
+        trait_type: felt252,
         value: felt252,
     }
 
