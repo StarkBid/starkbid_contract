@@ -12,17 +12,18 @@ pub enum OfferStatus {
 
 #[derive(Drop, Serde, starknet::Store)]
 pub struct Offer {
-    id: u256,
-    nft_contract: ContractAddress,
-    token_id: u256,
-    offerer: ContractAddress,
-    payment_token: ContractAddress, // Zero address for ETH/STRK
-    offer_amount: u256,
-    expiration: u64,
-    status: OfferStatus,
-    royalty_recipient: ContractAddress,
-    royalty_percentage: u256, // Base points (e.g., 250 = 2.5%)
+    pub id: u256,
+    pub nft_contract: ContractAddress,
+    pub token_id: u256,
+    pub offerer: ContractAddress,
+    pub payment_token: ContractAddress,
+    pub offer_amount: u256,
+    pub expiration: u64,
+    pub status: OfferStatus,
+    pub royalty_recipient: ContractAddress,
+    pub royalty_percentage: u256,
 }
+
 
 #[starknet::interface]
 pub trait IOffer<TContractState> {

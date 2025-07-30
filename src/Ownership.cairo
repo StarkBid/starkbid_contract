@@ -12,16 +12,15 @@ pub mod Ownership {
 
     #[storage]
     pub struct Storage {
-        asset_owner: Map<(ContractAddress, u256), ContractAddress>, // (asset, token_id) -> owner
+        asset_owner: Map<(ContractAddress, u256), ContractAddress>, 
         asset_ownership_history: Map<
             (ContractAddress, u256), Vec<ContractAddress>,
-        >, // (asset, token_id) -> list(owners)
-        // Royalty Storage
+        >, 
         royalty_settings: Map<
             (ContractAddress, u256), Vec<(ContractAddress, u8)>,
-        >, // (asset, token_id) -> Vec[(recipient, percentage_share)]
-        pending_withdrawals: Map<ContractAddress, u256>, // recipient_address -> amount_due
-        platform_fee_percentage_bp: u8, // Platform fee in basis points (e.g., 500 for 5%)
+        >,
+        pending_withdrawals: Map<ContractAddress, u256>, 
+        platform_fee_percentage_bp: u8, 
         platform_fee_recipient: ContractAddress,
         contract_owner: ContractAddress,
     }
@@ -108,11 +107,6 @@ pub mod Ownership {
 
     #[abi(embed_v0)]
     pub impl OwnershipImpl of IOwnership<ContractState> {
-        //CORE FUNCTIONALITIES
-        // @notice Transfer the ownership of an asset to another contract address
-        /// @param asset Address of the NFT contract
-        /// @param token_id token ID being listed
-        /// @param new_owner the new owner of the asset
         fn transfer_asset_ownership(
             ref self: ContractState,
             asset: ContractAddress,
@@ -123,10 +117,8 @@ pub mod Ownership {
             let asset_owner_entry = self.asset_owner.entry((asset, token_id));
             let previous_owner = asset_owner_entry.read();
 
-            // Allow initial assignment if previous_owner is zero
             if previous_owner
-                .is_zero() { // This is the first time ownership is being set for this asset.
-            // No need to check caller against previous_owner if previous_owner is zero.
+                .is_zero() { 
             } else {
                 assert(caller == previous_owner, 'Invalid Owner');
             }
@@ -135,9 +127,7 @@ pub mod Ownership {
 
             asset_owner_entry.write(new_owner);
 
-            // add the new owner to the ownership history
             self.asset_ownership_history.entry((asset, token_id)).append().write(new_owner);
-            // emit the OwnershipTransferred event
             self
                 .emit(
                     OwnershipTransferred {
@@ -149,20 +139,11 @@ pub mod Ownership {
                     },
                 );
         }
-        // @notice Retrieve the owner of an asset
-        /// @param asset Address of the NFT contract
-        /// @param token_id token ID being listed
-        /// @return owner The ContractAddress of the asset owner
         fn get_asset_owner(
             self: @ContractState, asset: ContractAddress, token_id: u256,
         ) -> ContractAddress {
             self.asset_owner.entry((asset, token_id)).read()
         }
-        // @notice Retrieve the ownership history of an asset
-        /// @param asset Address of the NFT contract
-        /// @param token_id token ID being listed
-        /// @return array<owner> A list of ContractAddresses signifying the ownership history of the
-        /// asset
         fn get_asset_ownership_history(
             self: @ContractState, asset: ContractAddress, token_id: u256,
         ) -> Array<ContractAddress> {
@@ -193,7 +174,6 @@ pub mod Ownership {
             let len = recipients_config.len();
             while i < len {
                 let tuple_value = recipients_config.at(i);
-                // Access tuple elements
                 let (recipient, percentage) = tuple_value;
                 assert(!recipient.is_zero(), 'Recipient cannot be zero');
                 assert(*percentage > 0_u8 && *percentage <= 100_u8, 'Invalid percentage');
@@ -203,8 +183,6 @@ pub mod Ownership {
             assert(total_percentage <= 100_u16, 'Total percentage > 100');
 
             let mut storage_vec_path = self.royalty_settings.entry((asset, token_id));
-
-            // Add new settings from the input array
             let mut j = 0;
             while j < len.into() {
                 storage_vec_path.at(j).write(*recipients_config.at(i));
@@ -254,11 +232,10 @@ pub mod Ownership {
             assert(fee_percentage <= 100, 'Platform fee % > 100');
 
             self.platform_fee_recipient.write(recipient);
-            self.platform_fee_percentage_bp.write(fee_percentage); // Storing as direct percentage
+            self.platform_fee_percentage_bp.write(fee_percentage);
             self.emit(PlatformFeeInfoUpdated { recipient, fee_bp: fee_percentage });
         }
 
-        // Royalty Distribution
         fn distribute_sale_proceeds(
             ref self: ContractState, asset: ContractAddress, token_id: u256, sale_price: u256,
         ) {
@@ -310,7 +287,6 @@ pub mod Ownership {
             self.emit(RoyaltiesDistributed { asset, token_id, sale_price });
         }
 
-        // Withdrawal
         fn withdraw_funds(ref self: ContractState) {
             let caller = get_caller_address();
             let amount_to_withdraw = self.pending_withdrawals.read(caller);
@@ -320,7 +296,6 @@ pub mod Ownership {
             self.emit(WithdrawalEvent { recipient: caller, amount: amount_to_withdraw });
         }
 
-        // View Functions
         fn get_pending_withdrawal_amount(self: @ContractState, recipient: ContractAddress) -> u256 {
             self.pending_withdrawals.read(recipient)
         }

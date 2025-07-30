@@ -11,35 +11,28 @@ pub mod ERC721Metadata {
 
     #[derive(Drop, Serde, starknet::Store)]
     struct TokenMetadata {
-        ipfs_hash: ByteArray, // IPFS hash stored as ByteArray
-        metadata_hash: felt252, // Hash of metadata for integrity
-        created_at: u64, // Timestamp
-        updated_at: u64, // Last update timestamp
-        admin: ContractAddress // Authorized admin for this token
+        ipfs_hash: ByteArray, 
+        metadata_hash: felt252, 
+        created_at: u64, 
+        updated_at: u64, 
+        admin: ContractAddress 
     }
 
     #[derive(Drop, Serde, starknet::Store)]
     struct Attribute {
-        trait_type: felt252,
+        trait_type: felt252, 
         value: felt252,
     }
 
     #[storage]
     struct Storage {
-        // ERC-721 basic info
         name: ByteArray,
         symbol: ByteArray,
-        // Core metadata storage
         token_metadata: Map<u256, TokenMetadata>,
-        // Attribute storage: token_id -> trait_type -> value
         token_attributes: Map<(u256, felt252), felt252>,
-        // Attribute keys for enumeration: token_id -> array of trait_types
         token_attribute_keys: Map<u256, Vec<felt252>>,
-        // IPFS gateway configuration
         ipfs_gateway: ByteArray,
-        // Contract owner
         owner: ContractAddress,
-        // Token existence mapping
         token_exists: Map<u256, bool>,
     }
 
@@ -171,10 +164,8 @@ pub mod ERC721Metadata {
             assert(self.is_authorized(token_id, caller), 'Not authorized');
             assert(self.token_exists.entry(token_id).read(), 'Token does not exist');
 
-            // Check if attribute already exists
             let existing_value = self.token_attributes.entry((token_id, trait_type)).read();
             if existing_value == 0 {
-                // New attribute, add to keys array
                 let mut keys = self.token_attribute_keys.entry(token_id);
                 keys.append().write(trait_type);
             }
@@ -189,7 +180,6 @@ pub mod ERC721Metadata {
             assert(self.is_authorized(token_id, caller), 'Not authorized');
             assert(self.token_exists.entry(token_id).read(), 'Token does not exist');
 
-            // Remove from storage
             self.token_attributes.entry((token_id, trait_type)).write(0);
             self.emit(AttributeRemoved { token_id, trait_type });
         }
@@ -224,8 +214,6 @@ pub mod ERC721Metadata {
             }
 
             let metadata = self.token_metadata.entry(token_id).read();
-
-            // Check if IPFS hash is valid
             if !self.validate_ipfs_hash(metadata.ipfs_hash) {
                 return false;
             }
@@ -234,8 +222,6 @@ pub mod ERC721Metadata {
         }
 
         fn validate_ipfs_hash(self: @ContractState, ipfs_hash: ByteArray) -> bool {
-            // Basic validation - IPFS hash should not be zero
-            // In a real implementation, you might want more sophisticated validation
             ipfs_hash != ""
         }
 
@@ -294,7 +280,6 @@ pub mod ERC721Metadata {
         }
     }
 
-    // Additional helper functions
     #[generate_trait]
     impl InternalImpl of InternalTrait {
         fn _only_owner(self: @ContractState) {
@@ -309,8 +294,6 @@ pub mod ERC721Metadata {
         fn _compute_metadata_hash(
             self: @ContractState, ipfs_hash: felt252, attributes: Array<(felt252, felt252)>,
         ) -> felt252 {
-            // Simple hash computation for metadata integrity
-            // In production, you might want to use a more sophisticated hashing algorithm
             let mut hash = ipfs_hash;
             let mut i = 0;
             while i < attributes.len() {
