@@ -58,15 +58,6 @@ pub mod Marketplace {
 
     #[abi(embed_v0)]
     pub impl MarketplaceImpl of IMarketplace<ContractState> {
-        //CORE FUNCTIONALITIES
-
-        /// @notice Creates a new marketplace listing
-        /// @param asset_contract Address of the NFT contract
-        /// @param token_id token ID being listed
-        /// @param price Listing price
-        /// @param listing_type FixedPrice or Auction
-        /// @param duration Duration of listing in seconds
-        /// @return listing_id The ID of the newly created listing
         fn create_listing(
             ref self: ContractState,
             asset_contract: ContractAddress,
@@ -104,10 +95,6 @@ pub mod Marketplace {
             listing_id
         }
 
-
-        /// @notice Purchases a fixed-price listing
-        /// @param listing_id The ID of the listing to purchase
-        /// Note: Transfers NFT to buyer and marks listing as sold
         fn purchase_listing(ref self: ContractState, listing_id: u256) {
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
@@ -124,9 +111,6 @@ pub mod Marketplace {
         }
 
 
-        /// @notice Cancels an active listing
-        /// @param listing_id The ID of the listing to cancel
-        /// Note: Only listing seller can cancel
         fn cancel_listing(ref self: ContractState, listing_id: u256) {
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
@@ -141,33 +125,19 @@ pub mod Marketplace {
             self.emit(ListingCancelled { listing_id });
         }
 
-        /// @notice Updates price of a fixed-price listing
-        /// @param listing_id The ID of the listing to update
-        /// @param new_price New listing price
-        /// Note: Only seller can update price
         fn update_listing_price(ref self: ContractState, listing_id: u256, new_price: u256) {
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
-
-            // Validate permissions and state
             assert(caller == listing.seller, 'Not the seller');
             assert(listing.status == ListingStatus::Active(()), 'Listing is not active');
             assert(
                 listing.listing_type == ListingType::FixedPrice(()), 'Not a fixed price listing',
             );
             assert(new_price > 0.into(), 'Price must be greater than 0');
-
-            // Update price
             listing.price = new_price;
             self.listings.write(listing_id, listing);
         }
 
-        // Auction functionality
-
-        /// @notice Places a bid on an auction listing
-        /// @param listing_id The ID of the auction listing
-        /// @param bid_amount The bid amount (in wei)
-        /// Note: Bid must be higher than current highest bid
         fn place_bid(ref self: ContractState, listing_id: u256, bid_amount: u256) {
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
@@ -184,10 +154,6 @@ pub mod Marketplace {
             self.emit(BidPlaced { listing_id, bidder: caller, bid_amount });
         }
 
-
-        /// @notice Finalizes an ended auction
-        /// @param listing_id The ID of the auction to finalize
-        /// Note: Transfers NFT to highest bidder if any bids were placed
         fn finalize_auction(ref self: ContractState, listing_id: u256) {
             let mut listing = self.listings.read(listing_id);
 
@@ -207,7 +173,6 @@ pub mod Marketplace {
             self.listings.write(listing_id, listing);
         }
 
-        // Batch operations for gas optimization
         fn batch_create_listings(
             ref self: ContractState,
             asset_contracts: Array<ContractAddress>,
@@ -265,27 +230,15 @@ pub mod Marketplace {
         }
 
 
-        // View functions
-
-        /// @notice Gets full listing details
-        /// @param listing_id The ID of the listing to query
-        /// @return Listing struct with all details
         fn get_listing(self: @ContractState, listing_id: u256) -> Listing {
             self.listings.read(listing_id)
         }
 
 
-        // @notice Gets current status of a listing
-        /// @param listing_id The ID of the listing to check
-        /// @return Current listing status (Active/Sold/Cancelled)
         fn get_listing_status(self: @ContractState, listing_id: u256) -> ListingStatus {
             self.listings.read(listing_id).status
         }
 
-
-        /// @notice Checks if listing is active and not expired
-        /// @param listing_id The ID of the listing to check
-        /// @return true if listing is active and not expired
         fn is_listing_active(self: @ContractState, listing_id: u256) -> bool {
             let listing = self.listings.read(listing_id);
             listing.status == ListingStatus::Active(()) && get_block_timestamp() <= listing.end_time

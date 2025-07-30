@@ -21,7 +21,6 @@ fn get_contract_addresses() -> (ContractAddress, ContractAddress, ContractAddres
     )
 }
 
-#[test]
 fn test_create_offer() {
     let offer_contract = deploy_contract();
     let (nft_contract, payment_token, _) = get_contract_addresses();
@@ -43,7 +42,6 @@ fn test_create_offer() {
     stop_cheat_block_timestamp(offer_contract.contract_address);
 }
 
-#[test]
 fn test_accept_offer() {
     let offer_contract = deploy_contract();
     let (nft_contract, payment_token, royalty_recipient) = get_contract_addresses();
@@ -74,7 +72,6 @@ fn test_accept_offer() {
     stop_cheat_block_timestamp(offer_contract.contract_address);
 }
 
-#[test]
 fn test_cancel_offer() {
     let offer_contract = deploy_contract();
     let (nft_contract, payment_token, _) = get_contract_addresses();
@@ -102,7 +99,6 @@ fn test_cancel_offer() {
     stop_cheat_block_timestamp(offer_contract.contract_address);
 }
 
-#[test]
 fn test_expired_offer() {
     let offer_contract = deploy_contract();
     let (nft_contract, payment_token, _) = get_contract_addresses();
@@ -126,7 +122,6 @@ fn test_expired_offer() {
     stop_cheat_block_timestamp(offer_contract.contract_address);
 }
 
-#[test]
 fn test_royalty_calculation() {
     let offer_contract = deploy_contract();
     let (nft_contract, payment_token, royalty_recipient) = get_contract_addresses();

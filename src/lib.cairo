@@ -1,8 +1,8 @@
-pub mod marketplace;
-pub mod nft_metadata;
-pub mod offer;
-pub mod ownership;
-pub mod verify_sig;
+pub mod Marketplace;
+pub mod NftMetadata;
+pub mod Offer;
+pub mod Ownership;
+pub mod VerifySignature;
 pub mod interfaces {
     pub mod ierc20;
     pub mod ierc721;
