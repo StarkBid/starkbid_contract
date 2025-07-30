@@ -43,7 +43,6 @@ pub mod VerifySignature {
             assert(claimed_address.is_non_zero(), 'Invalid user address');
             let timestamp: u64 = get_block_timestamp();
 
-            // Verify the signature
             let is_valid = check_ecdsa_signature(
                 message, claimed_address.into(), signature_r, signature_s,
             );

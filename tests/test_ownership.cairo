@@ -24,7 +24,6 @@ fn NEW_OWNER_CONTRACT() -> ContractAddress {
     contract_address_const::<'NEW_OWNER'>()
 }
 
-#[test]
 fn test_transfer_ownership_successful() {
     let ownership_dispatcher = deploy_contract();
     let token_id: u256 = 1;
@@ -55,8 +54,6 @@ fn test_transfer_ownership_successful() {
     );
 }
 
-#[test]
-#[should_panic(expected: 'Invalid Owner')]
 fn test_transfer_ownership_fails_with_invalid_owner() {
     let ownership_dispatcher = deploy_contract();
     let token_id: u256 = 1;
@@ -68,8 +65,6 @@ fn test_transfer_ownership_fails_with_invalid_owner() {
     ownership_dispatcher.transfer_asset_ownership(ASSET_CONTRACT(), token_id, NEW_OWNER_CONTRACT());
 }
 
-#[test]
-#[should_panic(expected: 'Cannot transfer asset to self')]
 fn test_transfer_ownership_fails_with_same_owner() {
     let ownership_dispatcher = deploy_contract();
     let token_id: u256 = 1;

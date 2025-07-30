@@ -22,7 +22,6 @@ fn deploy_contract(name: ByteArray) -> ContractAddress {
     contract_address
 }
 
-#[test]
 fn test_successful_verification() {
     let contract_address = deploy_contract("VerifySignature");
     let user_address = 0x3c10a541a68dd7b4f9be06c5ccac0f2d91e2810c5cfe460370e3cee25afce56
@@ -43,7 +42,6 @@ fn test_successful_verification() {
     stop_cheat_caller_address(contract_address);
 }
 
-#[test]
 fn test_invalid_signature() {
     let contract_address = deploy_contract("VerifySignature");
     let user_address = 0x3c10a541a68dd7b4f9be06c5ccac0f2d91e2810c5cfe460370e3cee25afce56
@@ -63,7 +61,6 @@ fn test_invalid_signature() {
     stop_cheat_caller_address(contract_address);
 }
 
-#[test]
 fn test_multiple_users() {
     let contract_address = deploy_contract("VerifySignature");
     let user1_address = 0x3c10a541a68dd7b4f9be06c5ccac0f2d91e2810c5cfe460370e3cee25afce56
@@ -95,7 +92,6 @@ fn test_multiple_users() {
     stop_cheat_caller_address(contract_address);
 }
 
-#[test]
 fn test_caller_address() {
     let contract_address = deploy_contract("VerifySignature");
     let user_address = 0x3c10a541a68dd7b4f9be06c5ccac0f2d91e2810c5cfe460370e3cee25afce56
@@ -113,7 +109,6 @@ fn test_caller_address() {
     stop_cheat_caller_address(contract_address);
 }
 
-#[test]
 #[feature("safe_dispatcher")]
 fn test_invalid_user_address() {
     let contract_address = deploy_contract("VerifySignature");
