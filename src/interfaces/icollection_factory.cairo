@@ -1,6 +1,6 @@
 use starknet::{ContractAddress, ClassHash};
 #[starknet::interface]
-trait ICollectionFactory<TContractState> {
+pub trait ICollectionFactory<TContractState> {
     fn declare_collection_class(ref self: TContractState, class_hash: ClassHash) -> bool;
 
     fn deploy_collection(
