@@ -44,3 +44,17 @@ fn deploy_contract() -> ContractAddress {
     let (contract_address, _) = contract.deploy(@constructor_args).unwrap();
     contract_address
 }
+
+
+#[test]
+fn test_nft_factory() {
+    let nft_factory_address = deploy_contract();
+
+    let erc721_dispatcher = IERC721Dispatcher {contract_address: nft_factory_address};
+    let erc721_metadata_dispatcher = IERC721MetadataDispatcher {contract_address: nft_factory_address};
+    // check if the contract is deployed
+    assert(erc721_metadata_dispatcher.name() == NAME(), 'name mismatch');
+    assert(erc721_metadata_dispatcher.symbol() == SYMBOL(), 'symbol mismatch');
+    assert(erc721_metadata_dispatcher.base_uri() == BASE_URI(), 'base uri mismatch');
+
+}
