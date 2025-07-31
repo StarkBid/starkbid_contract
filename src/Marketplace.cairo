@@ -1,14 +1,39 @@
 #[starknet::contract]
 pub mod Marketplace {
-    use core::starknet::storage::{Map, StoragePointerWriteAccess};
+    use core::num::traits::Zero;
+    use core::starknet::storage::{
+        Map, StoragePointerWriteAccess, StoragePointerReadAccess, MutableVecTrait, Vec, VecTrait,
+        StoragePathEntry
+    };
+    use crate::constants::{DEFAULT_ADMIN_ROLE, MARKETPLACE_ADMIN_ROLE, PAUSER_ROLE};
     use crate::interfaces::imarketplace::{IMarketplace, Listing, ListingStatus, ListingType};
+    use openzeppelin::access::accesscontrol::AccessControlComponent;
+    use openzeppelin::introspection::src5::SRC5Component;
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
+
+    component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
+    component!(path: SRC5Component, storage: src5, event: SRC5Event);
+
+    #[abi(embed_v0)]
+    impl AccessControlImpl =
+        AccessControlComponent::AccessControlImpl<ContractState>;
+    impl AccessControlInternalImpl = AccessControlComponent::InternalImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
 
     #[storage]
     struct Storage {
         listings: Map<u256, Listing>,
         next_listing_id: u256,
         active_listing_count: u256,
+        role_members: Map<felt252, Vec<ContractAddress>>, // role -> Vec of members
+        member_active: Map<(felt252, ContractAddress), bool>,
+        marketplace_paused: bool,
+        #[substorage(v0)]
+        accesscontrol: AccessControlComponent::Storage,
+        #[substorage(v0)]
+        src5: SRC5Component::Storage,
     }
 
     #[event]
@@ -18,6 +43,10 @@ pub mod Marketplace {
         ListingSold: ListingSold,
         ListingCancelled: ListingCancelled,
         BidPlaced: BidPlaced,
+        #[flat]
+        AccessControlEvent: AccessControlComponent::Event,
+        #[flat]
+        SRC5Event: SRC5Component::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -51,9 +80,30 @@ pub mod Marketplace {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
+    fn constructor(ref self: ContractState, admin: ContractAddress) {
         self.next_listing_id.write(1.into());
         self.active_listing_count.write(0.into());
+        self.marketplace_paused.write(false);
+
+        // Initialize RBAC
+        self.accesscontrol.initializer();
+
+        // Set up role hierarchy
+        self.accesscontrol.set_role_admin(MARKETPLACE_ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+        self.accesscontrol.set_role_admin(PAUSER_ROLE, DEFAULT_ADMIN_ROLE);
+        self.accesscontrol.set_role_admin(DEFAULT_ADMIN_ROLE, DEFAULT_ADMIN_ROLE);
+
+        // Grant initial roles
+        self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, admin);
+        self.accesscontrol._grant_role(MARKETPLACE_ADMIN_ROLE, admin);
+
+        // Initialize role member tracking for BOTH roles
+        self.role_members.entry(DEFAULT_ADMIN_ROLE).append().write(admin);
+        self.role_members.entry(MARKETPLACE_ADMIN_ROLE).append().write(admin);
+
+        // Mark both as active
+        self.member_active.write((DEFAULT_ADMIN_ROLE, admin), true);
+        self.member_active.write((MARKETPLACE_ADMIN_ROLE, admin), true);
     }
 
     #[abi(embed_v0)]
@@ -66,6 +116,7 @@ pub mod Marketplace {
             listing_type: ListingType,
             duration: u64,
         ) -> u256 {
+            assert(!self.marketplace_paused.read(), 'Marketplace paused');
             let caller = get_caller_address();
             let current_time = get_block_timestamp();
             let listing_id = self.next_listing_id.read();
@@ -96,6 +147,7 @@ pub mod Marketplace {
         }
 
         fn purchase_listing(ref self: ContractState, listing_id: u256) {
+            assert(!self.marketplace_paused.read(), 'Marketplace paused');
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
 
@@ -242,6 +294,146 @@ pub mod Marketplace {
         fn is_listing_active(self: @ContractState, listing_id: u256) -> bool {
             let listing = self.listings.read(listing_id);
             listing.status == ListingStatus::Active(()) && get_block_timestamp() <= listing.end_time
+        }
+
+        fn pause_marketplace(ref self: ContractState) {
+            self.accesscontrol.assert_only_role(PAUSER_ROLE);
+            self.marketplace_paused.write(true);
+        }
+
+        fn unpause_marketplace(ref self: ContractState) {
+            self.accesscontrol.assert_only_role(PAUSER_ROLE);
+            self.marketplace_paused.write(false);
+        }
+
+        fn grant_this_role(ref self: ContractState, role: felt252, account: ContractAddress) {
+            assert(!account.is_zero(), 'account is zero address');
+            // Check if user already has role before granting
+            let already_has_role = self.accesscontrol.has_role(role, account);
+
+            self.accesscontrol.grant_role(role, account);
+
+            // Only add to tracking if they didn't already have the role
+            if !already_has_role {
+                self._add_role_member(role, account);
+            }
+        }
+
+        fn revoke_this_role(ref self: ContractState, role: felt252, account: ContractAddress) {
+            // Safety check for critical roles
+            if role == DEFAULT_ADMIN_ROLE {
+                self._ensure_not_last_admin(account);
+            }
+
+            self.accesscontrol.revoke_role(role, account);
+            self._remove_role_member(role, account);
+        }
+
+        fn renounce_this_role(ref self: ContractState, role: felt252) {
+            let caller = get_caller_address();
+
+            // Safety check for critical roles
+            if role == DEFAULT_ADMIN_ROLE {
+                self._ensure_not_last_admin(caller);
+            }
+
+            self.accesscontrol.renounce_role(role, caller);
+            self._remove_role_member(role, caller);
+        }
+
+        fn has_this_role(self: @ContractState, role: felt252, account: ContractAddress) -> bool {
+            self.accesscontrol.has_role(role, account)
+        }
+
+        fn get_this_role_admin(self: @ContractState, role: felt252) -> felt252 {
+            self.accesscontrol.get_role_admin(role)
+        }
+
+        fn get_this_role_member_count(self: @ContractState, role: felt252) -> u256 {
+            let role_vec = self.role_members.entry(role);
+            let len = role_vec.len();
+            let mut active_count = 0;
+            let mut i = 0;
+
+            while i < len {
+                let member = role_vec.at(i).read();
+                // Count only if marked active AND actually has the role
+                if self.member_active.read((role, member))
+                    && self.accesscontrol.has_role(role, member) {
+                    active_count += 1;
+                }
+                i += 1;
+            };
+
+            active_count.into()
+        }
+    }
+
+    #[generate_trait]
+    impl InternalImpl of InternalTrait {
+        /// Adds a member to role tracking
+        fn _add_role_member(ref self: ContractState, role: felt252, account: ContractAddress) {
+            // Check if member already exists role members
+            if !self._is_member_in_role(role, account) {
+                self.role_members.entry(role).append().write(account);
+            }
+            // Mark as active
+            self.member_active.write((role, account), true);
+        }
+
+        /// Removes a member from role tracking
+        fn _remove_role_member(ref self: ContractState, role: felt252, account: ContractAddress) {
+            self.member_active.write((role, account), false);
+        }
+
+        /// Check if an account is in a role's member list
+        fn _is_member_in_role(
+            self: @ContractState, role: felt252, account: ContractAddress
+        ) -> bool {
+            self.member_active.read((role, account)) && self.accesscontrol.has_role(role, account)
+        }
+
+        /// Ensures that removing an account from a role won't leave zero admins
+        fn _ensure_not_last_admin(ref self: ContractState, account: ContractAddress) {
+            let admin_count = self.get_this_role_member_count(DEFAULT_ADMIN_ROLE);
+            assert(admin_count > 1, 'Cannot remove last admin');
+            assert(self.accesscontrol.has_role(DEFAULT_ADMIN_ROLE, account), 'Account not admin');
+        }
+
+        /// Safety check for critical operations
+        fn _assert_admin_or_higher(ref self: ContractState, required_role: felt252) {
+            let caller = get_caller_address();
+            let has_required_role = self.accesscontrol.has_role(required_role, caller);
+            let is_admin = self.accesscontrol.has_role(DEFAULT_ADMIN_ROLE, caller);
+            assert(has_required_role || is_admin, 'Insufficient permissions');
+        }
+
+        /// Batch role operations with safety checks
+        fn _safe_batch_revoke_roles(
+            ref self: ContractState, roles: Array<felt252>, account: ContractAddress
+        ) {
+            let mut i = 0;
+            let len = roles.len();
+
+            // First pass: check if any critical roles would be left empty
+            while i < len {
+                let role = *roles.at(i);
+                if role == DEFAULT_ADMIN_ROLE {
+                    self._ensure_not_last_admin(account);
+                }
+                i += 1;
+            };
+
+            // Second pass: safely revoke all roles
+            i = 0;
+            while i < len {
+                let role = *roles.at(i);
+                if self.accesscontrol.has_role(role, account) {
+                    self.accesscontrol.revoke_role(role, account);
+                    self._remove_role_member(role, account);
+                }
+                i += 1;
+            };
         }
     }
 }
