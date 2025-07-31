@@ -4,6 +4,7 @@ pub mod NftMetadata;
 pub mod Offer;
 pub mod Ownership;
 pub mod VerifySignature;
+pub mod constants;
 pub mod interfaces {
     pub mod icollection_factory;
     pub mod ierc20;
