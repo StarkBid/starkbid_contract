@@ -48,4 +48,16 @@ pub trait IOwnership<TContractState> {
     ) -> Array<(ContractAddress, u8)>;
     fn get_platform_fee_info(self: @TContractState) -> (ContractAddress, u8);
     fn get_contract_owner(self: @TContractState) -> ContractAddress;
+
+    // Access control
+    fn grant_this_role(ref self: TContractState, role: felt252, account: ContractAddress);
+    fn revoke_this_role(ref self: TContractState, role: felt252, account: ContractAddress);
+    fn renounce_this_role(ref self: TContractState, role: felt252);
+    fn has_this_role(self: @TContractState, role: felt252, account: ContractAddress) -> bool;
+    fn get_this_role_admin(self: @TContractState, role: felt252) -> felt252;
+    fn get_this_role_member_count(self: @TContractState, role: felt252) -> u256;
+
+    fn pause_system(ref self: TContractState);
+    fn unpause_system(ref self: TContractState);
+    fn is_system_paused(self: @TContractState) -> bool;
 }
