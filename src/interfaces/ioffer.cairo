@@ -58,4 +58,16 @@ pub trait IOffer<TContractState> {
     fn get_royalty_info(
         self: @TContractState, nft_contract: ContractAddress
     ) -> (ContractAddress, u256);
+
+    // Access control
+    fn grant_this_role(ref self: TContractState, role: felt252, account: ContractAddress);
+    fn revoke_this_role(ref self: TContractState, role: felt252, account: ContractAddress);
+    fn renounce_this_role(ref self: TContractState, role: felt252);
+    fn has_this_role(self: @TContractState, role: felt252, account: ContractAddress) -> bool;
+    fn get_this_role_admin(self: @TContractState, role: felt252) -> felt252;
+    fn get_this_role_member_count(self: @TContractState, role: felt252) -> u256;
+
+    fn pause_offers(ref self: TContractState);
+    fn unpause_offers(ref self: TContractState);
+    fn are_offers_paused(self: @TContractState) -> bool;
 }
