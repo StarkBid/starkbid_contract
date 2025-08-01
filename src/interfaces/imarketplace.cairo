@@ -65,5 +65,16 @@ pub trait IMarketplace<TContractState> {
     fn get_listing(self: @TContractState, listing_id: u256) -> Listing;
     fn get_listing_status(self: @TContractState, listing_id: u256) -> ListingStatus;
     fn is_listing_active(self: @TContractState, listing_id: u256) -> bool;
+
+    fn pause_marketplace(ref self: TContractState);
+    fn unpause_marketplace(ref self: TContractState);
+
+    // Access control
+    fn grant_this_role(ref self: TContractState, role: felt252, account: ContractAddress);
+    fn revoke_this_role(ref self: TContractState, role: felt252, account: ContractAddress);
+    fn renounce_this_role(ref self: TContractState, role: felt252);
+    fn has_this_role(self: @TContractState, role: felt252, account: ContractAddress) -> bool;
+    fn get_this_role_admin(self: @TContractState, role: felt252) -> felt252;
+    fn get_this_role_member_count(self: @TContractState, role: felt252) -> u256;
 }
 
