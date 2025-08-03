@@ -78,7 +78,7 @@ pub mod PausableComponent {
     #[generate_trait]
     pub impl InternalImpl<
         TContractState, +HasComponent<TContractState>
-    > of InternalTrait<TContractState> {
+    > of PauseInternalTrait<TContractState> {
         fn initializer(ref self: ComponentState<TContractState>, pauser: ContractAddress) {
             assert(!pauser.is_zero(), Errors::ZERO_ADDRESS);
             self.paused.write(false);

@@ -25,9 +25,10 @@ fn UNAUTHORIZED_USER() -> ContractAddress {
 fn deploy_offer_contract() -> (IOfferDispatcher, IPausableDispatcher) {
     let contract = declare("Offer").unwrap().contract_class();
 
-    // Deploy AS the OWNER address so get_caller_address() returns OWNER
     start_cheat_caller_address_global(OWNER());
-    let (contract_address, _) = contract.deploy(@ArrayTrait::new()).unwrap();
+    let mut calldata = array![];
+    OWNER().serialize(ref calldata);
+    let (contract_address, _) = contract.deploy(@calldata).unwrap();
     stop_cheat_caller_address_global();
 
     (IOfferDispatcher { contract_address }, IPausableDispatcher { contract_address })
@@ -44,9 +45,10 @@ fn get_contract_addresses() -> (ContractAddress, ContractAddress, ContractAddres
 fn deploy_marketplace_contract() -> (IMarketplaceDispatcher, IPausableDispatcher) {
     let contract = declare("Marketplace").unwrap().contract_class();
 
-    // Deploy AS the OWNER address so get_caller_address() returns OWNER
     start_cheat_caller_address_global(OWNER());
-    let (contract_address, _) = contract.deploy(@ArrayTrait::new()).unwrap();
+    let mut calldata = array![];
+    OWNER().serialize(ref calldata);
+    let (contract_address, _) = contract.deploy(@calldata).unwrap();
     stop_cheat_caller_address_global();
 
     (IMarketplaceDispatcher { contract_address }, IPausableDispatcher { contract_address })

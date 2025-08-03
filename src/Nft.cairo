@@ -1,7 +1,7 @@
 #[starknet::contract]
 pub mod NftFactory {
-    use crate::components::pausable::PausableComponent::InternalTrait;
     use crate::components::pausable::PausableComponent::Pausable;
+    use crate::components::pausable::PausableComponent::PauseInternalTrait;
     use crate::components::pausable::{PausableComponent, IPausable};
     use crate::interfaces::ierc721::IERC721Mintable;
     use openzeppelin_introspection::src5::SRC5Component;

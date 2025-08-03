@@ -2,8 +2,8 @@
 pub mod Offer {
     use core::num::traits::Zero;
     use core::traits::TryInto;
-    use crate::components::pausable::PausableComponent::InternalTrait;
     use crate::components::pausable::PausableComponent::Pausable;
+    use crate::components::pausable::PausableComponent::PauseInternalTrait;
     use crate::components::pausable::{PausableComponent, IPausable};
 
     use crate::constants::{DEFAULT_ADMIN_ROLE, MARKETPLACE_ADMIN_ROLE, PAUSER_ROLE};
@@ -141,8 +141,7 @@ pub mod Offer {
         // Mark both as active
         self.member_active.write((DEFAULT_ADMIN_ROLE, admin), true);
         self.member_active.write((MARKETPLACE_ADMIN_ROLE, admin), true);
-        let deployer = get_caller_address();
-        self.pausable.initializer(deployer);
+        self.pausable.initializer(admin);
     }
 
     #[abi(embed_v0)]

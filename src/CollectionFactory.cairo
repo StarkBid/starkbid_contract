@@ -2,8 +2,8 @@
 mod CollectionFactory {
     use core::num::traits::Zero;
     use core::poseidon::PoseidonTrait;
-    use crate::components::pausable::PausableComponent::InternalTrait;
     use crate::components::pausable::PausableComponent::Pausable;
+    use crate::components::pausable::PausableComponent::PauseInternalTrait;
     use crate::components::pausable::{Pausable, IPausable};
     use crate::constants::{DEFAULT_ADMIN_ROLE, COLLECTION_CREATOR_ROLE, MARKETPLACE_ADMIN_ROLE};
     use crate::interfaces::icollection_factory::ICollectionFactory;
