@@ -5,6 +5,10 @@ pub mod Marketplace {
         Map, StoragePointerWriteAccess, StoragePointerReadAccess, MutableVecTrait, Vec, VecTrait,
         StoragePathEntry
     };
+    use core::starknet::storage::{Map, StoragePointerWriteAccess};
+    use crate::components::pausable::PausableComponent::InternalTrait;
+    use crate::components::pausable::PausableComponent::Pausable;
+    use crate::components::pausable::{PausableComponent, IPausable};
     use crate::constants::{DEFAULT_ADMIN_ROLE, MARKETPLACE_ADMIN_ROLE, PAUSER_ROLE};
     use crate::interfaces::imarketplace::{IMarketplace, Listing, ListingStatus, ListingType};
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -21,6 +25,8 @@ pub mod Marketplace {
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+    // Pausable component
+    component!(path: PausableComponent, storage: pausable, event: PausableEvent);
 
     #[storage]
     struct Storage {
@@ -34,6 +40,8 @@ pub mod Marketplace {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        #[substorage(v0)]
+        pausable: PausableComponent::Storage,
     }
 
     #[event]
@@ -47,6 +55,7 @@ pub mod Marketplace {
         AccessControlEvent: AccessControlComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
+        PausableEvent: PausableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -104,6 +113,9 @@ pub mod Marketplace {
         // Mark both as active
         self.member_active.write((DEFAULT_ADMIN_ROLE, admin), true);
         self.member_active.write((MARKETPLACE_ADMIN_ROLE, admin), true);
+
+        let deployer = get_caller_address();
+        self.pausable.initializer(deployer);
     }
 
     #[abi(embed_v0)]
@@ -116,7 +128,9 @@ pub mod Marketplace {
             listing_type: ListingType,
             duration: u64,
         ) -> u256 {
+            self.pausable._assert_not_paused();
             assert(!self.marketplace_paused.read(), 'Marketplace paused');
+
             let caller = get_caller_address();
             let current_time = get_block_timestamp();
             let listing_id = self.next_listing_id.read();
@@ -147,7 +161,9 @@ pub mod Marketplace {
         }
 
         fn purchase_listing(ref self: ContractState, listing_id: u256) {
+            self.pausable._assert_not_paused();
             assert(!self.marketplace_paused.read(), 'Marketplace paused');
+
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
 
@@ -164,6 +180,7 @@ pub mod Marketplace {
 
 
         fn cancel_listing(ref self: ContractState, listing_id: u256) {
+            self.pausable._assert_not_paused();
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
 
@@ -178,6 +195,7 @@ pub mod Marketplace {
         }
 
         fn update_listing_price(ref self: ContractState, listing_id: u256, new_price: u256) {
+            self.pausable._assert_not_paused();
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
             assert(caller == listing.seller, 'Not the seller');
@@ -191,6 +209,7 @@ pub mod Marketplace {
         }
 
         fn place_bid(ref self: ContractState, listing_id: u256, bid_amount: u256) {
+            self.pausable._assert_not_paused();
             let caller = get_caller_address();
             let mut listing = self.listings.read(listing_id);
 
@@ -207,6 +226,7 @@ pub mod Marketplace {
         }
 
         fn finalize_auction(ref self: ContractState, listing_id: u256) {
+            self.pausable._assert_not_paused();
             let mut listing = self.listings.read(listing_id);
 
             assert(listing.status == ListingStatus::Active(()), 'Inactive');
@@ -233,6 +253,7 @@ pub mod Marketplace {
             listing_types: Array<ListingType>,
             durations: Array<u64>,
         ) -> Array<u256> {
+            self.pausable._assert_not_paused();
             let len = asset_contracts.len();
             assert(token_ids.len() == len, 'Length mismatch');
             assert(prices.len() == len, 'Length mismatch');
@@ -259,6 +280,7 @@ pub mod Marketplace {
         }
 
         fn batch_cancel_listings(ref self: ContractState, listing_ids: Array<u256>) {
+            self.pausable._assert_not_paused();
             let len = listing_ids.len();
             let mut i: u32 = 0;
             while i < len {
@@ -268,6 +290,7 @@ pub mod Marketplace {
         }
 
         fn batch_finalize_auctions(ref self: ContractState, listing_ids: Array<u256>) {
+            self.pausable._assert_not_paused();
             let current_time = get_block_timestamp();
             let len = listing_ids.len();
             let mut i: u32 = 0;
@@ -434,6 +457,21 @@ pub mod Marketplace {
                 }
                 i += 1;
             };
+        }
+    }
+    #[abi(embed_v0)]
+    impl PausableImpl of IPausable<ContractState> {
+        fn pause(ref self: ContractState) {
+            // Delegate to component
+            self.pausable.pause();
+        }
+
+        fn unpause(ref self: ContractState) {
+            self.pausable.unpause();
+        }
+
+        fn paused(self: @ContractState) -> bool {
+            self.pausable.paused()
         }
     }
 }

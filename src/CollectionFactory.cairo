@@ -1,6 +1,10 @@
 #[starknet::contract]
 mod CollectionFactory {
     use core::num::traits::Zero;
+    use core::poseidon::PoseidonTrait;
+    use crate::components::pausable::PausableComponent::InternalTrait;
+    use crate::components::pausable::PausableComponent::Pausable;
+    use crate::components::pausable::{Pausable, IPausable};
     use crate::constants::{DEFAULT_ADMIN_ROLE, COLLECTION_CREATOR_ROLE, MARKETPLACE_ADMIN_ROLE};
     use crate::interfaces::icollection_factory::ICollectionFactory;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
@@ -13,6 +17,8 @@ mod CollectionFactory {
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
+    // Pausable component
+    component!(path: PausableComponent, storage: pausable, event: PausableEvent);
 
     #[abi(embed_v0)]
     impl AccessControlImpl =
@@ -21,6 +27,7 @@ mod CollectionFactory {
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+
 
     #[storage]
     struct Storage {
@@ -36,6 +43,8 @@ mod CollectionFactory {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        #[substorage(v0)]
+        pausable: PausableComponent::Storage,
     }
 
     #[event]
@@ -50,6 +59,8 @@ mod CollectionFactory {
         AccessControlEvent: AccessControlComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
+        #[flat]
+        PausableEvent: PausableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -93,8 +104,7 @@ mod CollectionFactory {
         unpaused_by: ContractAddress,
         timestamp: u64,
     }
-
-    mod Errors {
+    pub mod Errors {
         const ZERO_ADDRESS: felt252 = 'Zero address not allowed';
         const CLASS_NOT_DECLARED: felt252 = 'Class hash not declared';
         const CLASS_ALREADY_DECLARED: felt252 = 'Class hash already declared';
@@ -131,13 +141,17 @@ mod CollectionFactory {
         // Mark both as active
         self.member_active.write((DEFAULT_ADMIN_ROLE, owner), true);
         self.member_active.write((MARKETPLACE_ADMIN_ROLE, owner), true);
+        self.pausable.initializer(pauser: owner);
     }
 
     #[abi(embed_v0)]
     impl CollectionFactoryImpl of ICollectionFactory<ContractState> {
         fn declare_collection_class(ref self: ContractState, class_hash: ClassHash) -> bool {
+            // Add pause protection
+            self.pausable._assert_not_paused();
             assert(!self.factory_paused.read(), Errors::FACTORY_PAUSED);
             self.accesscontrol.assert_only_role(MARKETPLACE_ADMIN_ROLE);
+
             self._assert_only_owner();
 
             assert(!self.declared_classes.read(class_hash), Errors::CLASS_ALREADY_DECLARED);
@@ -150,8 +164,11 @@ mod CollectionFactory {
         fn deploy_collection(
             ref self: ContractState, class_hash: ClassHash, arguments: Array<felt252>,
         ) -> (ContractAddress, u256) {
+            // Add pause protection
+            self.pausable._assert_not_paused();
             assert(!self.factory_paused.read(), Errors::FACTORY_PAUSED);
             self.accesscontrol.assert_only_role(COLLECTION_CREATOR_ROLE);
+
             self._assert_class_declared(class_hash);
             let creator = get_caller_address();
             let salt = PoseidonTrait::new()
@@ -292,6 +309,21 @@ mod CollectionFactory {
 
         fn is_factory_paused(self: @ContractState) -> bool {
             self.factory_paused.read()
+        }
+    }
+    #[abi(embed_v0)]
+    impl PausableImpl of IPausable<ContractState> {
+        fn pause(ref self: ContractState) {
+            // Delegate to component
+            self.pausable.pause();
+        }
+
+        fn unpause(ref self: ContractState) {
+            self.pausable.unpause();
+        }
+
+        fn paused(self: @ContractState) -> bool {
+            self.pausable.paused()
         }
     }
     #[generate_trait]
