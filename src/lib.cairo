@@ -15,3 +15,6 @@ pub mod interfaces {
     pub mod iownership;
     pub mod iverify_sig;
 }
+pub mod components {
+    pub mod pausable;
+}

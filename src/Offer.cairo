@@ -2,6 +2,9 @@
 pub mod Offer {
     use core::num::traits::Zero;
     use core::traits::TryInto;
+    use crate::components::pausable::PausableComponent::Pausable;
+    use crate::components::pausable::PausableComponent::PauseInternalTrait;
+    use crate::components::pausable::{PausableComponent, IPausable};
 
     use crate::constants::{DEFAULT_ADMIN_ROLE, MARKETPLACE_ADMIN_ROLE, PAUSER_ROLE};
     use crate::interfaces::ierc20::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -25,9 +28,12 @@ pub mod Offer {
 
     #[abi(embed_v0)]
     impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
+    // Pausable component
+    component!(path: PausableComponent, storage: pausable, event: PausableEvent);
 
     const ZERO_ADDRESS: felt252 = 0;
     const BASIS_POINTS: u256 = 10000;
+
 
     #[storage]
     struct Storage {
@@ -43,6 +49,8 @@ pub mod Offer {
         accesscontrol: AccessControlComponent::Storage,
         #[substorage(v0)]
         src5: SRC5Component::Storage,
+        #[substorage(v0)]
+        pausable: PausableComponent::Storage,
     }
 
     #[event]
@@ -58,6 +66,8 @@ pub mod Offer {
         AccessControlEvent: AccessControlComponent::Event,
         #[flat]
         SRC5Event: SRC5Component::Event,
+        #[flat]
+        PausableEvent: PausableComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -131,6 +141,7 @@ pub mod Offer {
         // Mark both as active
         self.member_active.write((DEFAULT_ADMIN_ROLE, admin), true);
         self.member_active.write((MARKETPLACE_ADMIN_ROLE, admin), true);
+        self.pausable.initializer(admin);
     }
 
     #[abi(embed_v0)]
@@ -143,7 +154,9 @@ pub mod Offer {
             offer_amount: u256,
             expiration: u64,
         ) -> u256 {
+            self.pausable._assert_not_paused();
             assert(!self.offers_paused.read(), 'Offers Paused');
+
             assert(offer_amount > 0.into(), 'Invalid offer amount');
             assert(expiration > get_block_timestamp(), 'Invalid expiration');
 
@@ -190,6 +203,7 @@ pub mod Offer {
         }
 
         fn accept_offer(ref self: ContractState, offer_id: u256) {
+            self.pausable._assert_not_paused();
             assert(!self.offers_paused.read(), 'Offers Paused');
             let offer = self.offers.read(offer_id);
             let caller = get_caller_address();
@@ -246,6 +260,7 @@ pub mod Offer {
         }
 
         fn cancel_offer(ref self: ContractState, offer_id: u256) {
+            self.pausable._assert_not_paused();
             let offer = self.offers.read(offer_id);
             let caller = get_caller_address();
 
@@ -450,6 +465,21 @@ pub mod Offer {
                 }
                 i += 1;
             };
+        }
+    }
+    #[abi(embed_v0)]
+    impl PausableImpl of IPausable<ContractState> {
+        fn pause(ref self: ContractState) {
+            // Delegate to component
+            self.pausable.pause();
+        }
+
+        fn unpause(ref self: ContractState) {
+            self.pausable.unpause();
+        }
+
+        fn paused(self: @ContractState) -> bool {
+            self.pausable.paused()
         }
     }
 }
